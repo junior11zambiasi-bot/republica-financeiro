@@ -1,0 +1,1255 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>República — Financeiro</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --g900:#063d20;--g800:#0F5132;--g700:#1a7348;--g600:#28a766;--g400:#5cb88a;--g100:#e8f5ee;--g50:#f0faf4;
+  --red:#dc2626;--red2:#ef4444;--red-bg:#fef2f2;--red-border:#fecaca;
+  --amber:#d97706;--amber-bg:#fffbeb;--amber-border:#fde68a;
+  --blue:#1d4ed8;--blue-bg:#eff6ff;
+  --bg:#f1f5f9;--card:#fff;--border:#e2e8f0;--text:#0f172a;--muted:#64748b;--muted2:#94a3b8;
+  --radius:14px;--radius-sm:8px;--radius-xs:6px;
+  --shadow:0 1px 3px rgba(0,0,0,.07),0 1px 2px rgba(0,0,0,.04);
+  --shadow-md:0 4px 16px rgba(0,0,0,.10);
+  --shadow-lg:0 8px 32px rgba(0,0,0,.14);
+  --topbar:60px;--sidebar:64px;
+}
+[data-dark]{
+  --bg:#0d1117;--card:#161b22;--border:#21262d;--text:#e6edf3;--muted:#8b949e;--muted2:#6e7681;
+  --g50:#0d2818;--g100:#1a3a28;
+  --red-bg:#2d1515;--red-border:#7f1d1d;
+  --amber-bg:#2d2008;--amber-border:#78350f;
+  --blue-bg:#1e3a5f;
+  --shadow:0 1px 3px rgba(0,0,0,.3);--shadow-md:0 4px 16px rgba(0,0,0,.4);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);font-size:14px;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font-family:inherit;font-size:14px}
+input,select,textarea{color:var(--text);background:var(--card);border:1.5px solid var(--border);border-radius:var(--radius-xs);padding:9px 12px;outline:none;transition:border .15s,box-shadow .15s;width:100%}
+input:focus,select:focus,textarea:focus{border-color:var(--g600);box-shadow:0 0 0 3px rgba(40,167,102,.12)}
+/* ── TOPBAR ─────────────────────────────────────────── */
+.topbar{position:fixed;top:0;left:0;right:0;height:var(--topbar);background:var(--g800);display:flex;align-items:center;padding:0 16px;gap:12px;z-index:200}
+.topbar-logo{font-size:15px;font-weight:800;color:#fff;letter-spacing:-.3px;white-space:nowrap}
+.topbar-logo span{color:var(--g400)}
+.topbar-company{font-size:12px;color:rgba(255,255,255,.55);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.topbar-actions{display:flex;align-items:center;gap:8px}
+/* ── BOTTOM NAV (mobile) ────────────────────────────── */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;height:var(--sidebar);background:var(--card);border-top:1px solid var(--border);display:flex;z-index:200;safe-area-inset-bottom:env(safe-area-inset-bottom)}
+.bnav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;color:var(--muted);font-size:10px;font-weight:600;border:none;background:none;transition:color .15s;padding:env(safe-area-inset-bottom,0) 0 0}
+.bnav-item.active{color:var(--g700)}
+.bnav-icon{font-size:20px;line-height:1}
+/* ── DESKTOP SIDEBAR ────────────────────────────────── */
+.sidebar{position:fixed;left:0;top:var(--topbar);bottom:0;width:220px;background:var(--card);border-right:1px solid var(--border);overflow-y:auto;z-index:100;transform:translateX(-100%);transition:transform .25s}
+.sidebar.open{transform:none}
+.sidebar nav{padding:8px 0}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 16px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;transition:all .15s;border:none;background:none;width:100%;text-align:left}
+.nav-item:hover{background:var(--g50);color:var(--g800)}
+.nav-item.active{background:var(--g50);color:var(--g800);font-weight:700;border-right:3px solid var(--g600)}
+.nav-badge{margin-left:auto;background:var(--amber);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:100px}
+.sidebar-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:99;display:none}
+.sidebar-overlay.show{display:block}
+/* ── MAIN ───────────────────────────────────────────── */
+.main{padding-top:var(--topbar);padding-bottom:calc(var(--sidebar) + env(safe-area-inset-bottom,0px));min-height:100vh}
+.page{display:none;padding:16px}
+.page.active{display:block}
+/* ── CARDS ──────────────────────────────────────────── */
+.card{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);box-shadow:var(--shadow)}
+.card-pad{padding:16px}
+.kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.kpi{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);padding:14px 16px;box-shadow:var(--shadow)}
+.kpi-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;display:flex;align-items:center;gap:4px}
+.kpi-value{font-size:22px;font-weight:800;letter-spacing:-.5px;line-height:1.1}
+.kpi-sub{font-size:11px;color:var(--muted);margin-top:4px}
+.kpi-sub.up{color:var(--g700)}.kpi-sub.dn{color:var(--red)}
+/* ── TIMELINE ───────────────────────────────────────── */
+.timeline{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);overflow:hidden}
+.tl-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.tl-date{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;padding:8px 16px 4px;background:var(--bg);border-bottom:1px solid var(--border)}
+.tl-row{display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--border);transition:background .1s}
+.tl-row:last-child{border-bottom:none}
+.tl-row:active{background:var(--g50)}
+.tl-icon{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.tl-body{flex:1;min-width:0}
+.tl-cat{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tl-sub{font-size:11px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tl-right{text-align:right;flex-shrink:0}
+.tl-val{font-size:14px;font-weight:700}
+.tl-status{font-size:10px;font-weight:700;padding:2px 8px;border-radius:100px;margin-top:3px;display:inline-block}
+/* ── BADGE ──────────────────────────────────────────── */
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:100px;font-size:11px;font-weight:700}
+.badge-green{background:var(--g100);color:var(--g800)}
+.badge-red{background:var(--red-bg);color:var(--red)}
+.badge-amber{background:var(--amber-bg);color:var(--amber)}
+.badge-blue{background:var(--blue-bg);color:var(--blue)}
+.badge-gray{background:var(--border);color:var(--muted)}
+/* ── BUTTONS ────────────────────────────────────────── */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 16px;border-radius:var(--radius-xs);font-size:13px;font-weight:600;border:none;cursor:pointer;transition:all .15s;white-space:nowrap}
+.btn-primary{background:var(--g800);color:#fff}.btn-primary:active{background:var(--g900)}
+.btn-danger{background:var(--red);color:#fff}
+.btn-ghost{background:transparent;color:var(--muted);border:1.5px solid var(--border)}.btn-ghost:active{background:var(--g50)}
+.btn-sm{padding:6px 12px;font-size:12px}
+.btn-icon{padding:8px;background:transparent;border:1.5px solid var(--border);border-radius:var(--radius-xs);color:var(--muted);cursor:pointer}
+.btn-icon:active{background:var(--g50)}
+.btn-rec{background:#dcfce7;color:#15803d;border:none}
+.btn-des{background:var(--red-bg);color:var(--red);border:none}
+/* ── MODAL ──────────────────────────────────────────── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:300;display:flex;align-items:flex-end;justify-content:center;padding:0}
+@media(min-width:600px){.modal-overlay{align-items:center;padding:16px}}
+.modal{background:var(--card);border-radius:var(--radius) var(--radius) 0 0;width:100%;max-width:520px;max-height:92vh;overflow-y:auto;box-shadow:var(--shadow-lg)}
+@media(min-width:600px){.modal{border-radius:var(--radius)}}
+.modal-head{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--card);z-index:1}
+.modal-head h3{font-size:16px;font-weight:700}
+.modal-body{padding:18px}
+.modal-footer{padding:14px 18px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+.form-row{margin-bottom:14px}
+.form-label{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.type-toggle{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;background:var(--border);border-radius:var(--radius-xs);padding:3px;margin-bottom:16px}
+.type-btn{padding:8px 4px;text-align:center;border-radius:var(--radius-xs);font-size:13px;font-weight:600;cursor:pointer;color:var(--muted);transition:all .15s;border:none;background:transparent}
+.type-btn.active-rec{background:var(--card);color:var(--g800);box-shadow:var(--shadow)}
+.type-btn.active-des{background:var(--card);color:var(--red);box-shadow:var(--shadow)}
+.type-btn.active-out{background:var(--card);color:var(--blue);box-shadow:var(--shadow)}
+/* ── FILTER BAR ─────────────────────────────────────── */
+.filter-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.filter-bar select,.filter-bar input{width:auto;flex:1;min-width:100px;font-size:13px}
+.period-tabs{display:flex;background:var(--border);padding:3px;border-radius:var(--radius-xs);gap:2px;flex-shrink:0}
+.ptab{padding:6px 12px;border-radius:var(--radius-xs);font-size:12px;font-weight:600;cursor:pointer;color:var(--muted);border:none;background:transparent;transition:all .15s}
+.ptab.active{background:var(--card);color:var(--text);box-shadow:var(--shadow)}
+/* ── PROGRESS ───────────────────────────────────────── */
+.progress{background:var(--border);border-radius:100px;height:7px;overflow:hidden}
+.progress-bar{height:100%;border-radius:100px;background:var(--g600);transition:width .4s}
+/* ── SECTION HEADER ─────────────────────────────────── */
+.sec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:8px}
+.sec-title{font-size:16px;font-weight:800}
+/* ── TABLE ──────────────────────────────────────────── */
+.tbl-wrap{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);overflow:hidden}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);border-bottom:1px solid var(--border);text-align:left;background:var(--bg)}
+td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+.tr:hover td{background:var(--g50)}
+/* ── CHART ──────────────────────────────────────────── */
+.chart-card{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);padding:16px}
+.chart-title{font-size:13px;font-weight:700;margin-bottom:12px}
+.chart-wrap{position:relative;height:200px}
+/* ── MISC ───────────────────────────────────────────── */
+.hidden{display:none!important}
+.text-green{color:var(--g800)}.text-red{color:var(--red)}.text-amber{color:var(--amber)}
+.text-right{text-align:right}.text-center{text-align:center}
+.flex{display:flex}.items-center{align-items:center}.justify-between{justify-content:space-between}.gap-8{gap:8px}
+.alert{padding:12px 14px;border-radius:var(--radius-xs);font-size:13px;margin-bottom:12px;border:1px solid transparent}
+.alert-warn{background:var(--amber-bg);border-color:var(--amber-border);color:var(--amber)}
+.alert-danger{background:var(--red-bg);border-color:var(--red-border);color:var(--red)}
+.alert-success{background:var(--g100);border-color:#bbf7d0;color:var(--g800)}
+.empty{text-align:center;padding:40px 20px;color:var(--muted)}
+.empty-icon{font-size:36px;margin-bottom:10px}
+.dark-toggle{width:40px;height:22px;border-radius:100px;border:none;cursor:pointer;background:rgba(255,255,255,.2);position:relative;transition:.2s;flex-shrink:0}
+.dark-toggle.on{background:var(--g600)}
+.dark-toggle::after{content:'';position:absolute;width:16px;height:16px;border-radius:50%;background:#fff;top:3px;left:3px;transition:.2s}
+.dark-toggle.on::after{transform:translateX(18px)}
+.topbar-sep{width:1px;height:24px;background:rgba(255,255,255,.15);flex-shrink:0}
+/* ── CAT BARS ───────────────────────────────────────── */
+.cat-bar-wrap{margin-bottom:12px}
+.cat-bar-label{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px}
+.cat-bar-name{font-weight:600;color:var(--text)}
+.cat-bar-pct{color:var(--muted)}
+/* ── DRAG SHEET ─────────────────────────────────────── */
+.sheet-handle{width:40px;height:4px;border-radius:2px;background:var(--border);margin:10px auto 4px;flex-shrink:0}
+/* ── RESPONSIVE ─────────────────────────────────────── */
+@media(min-width:640px){
+  .kpi-grid{grid-template-columns:repeat(3,1fr)}
+  .form-grid{grid-template-columns:1fr 1fr}
+  .main{padding-bottom:0}
+  .bottom-nav{display:none}
+  .sidebar{transform:none;top:var(--topbar)}
+  .main{margin-left:220px;padding-bottom:0}
+  .page{padding:20px 24px}
+  .modal-overlay{align-items:center;padding:16px}
+  .modal{border-radius:var(--radius)}
+}
+@media(max-width:639px){
+  .sidebar{top:0;height:100%;width:80%;max-width:280px}
+  .kpi-grid{grid-template-columns:1fr 1fr}
+  .hide-mobile{display:none!important}
+  .topbar-company{display:none}
+}
+@keyframes slideUp{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal{animation:slideUp .2s ease}
+@media(min-width:600px){.modal{animation:none}}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <button class="btn-icon" style="border-color:rgba(255,255,255,.2);color:#fff;background:transparent" onclick="toggleSidebar()" id="menuBtn">☰</button>
+  <div class="topbar-logo">🅿 <span>República</span></div>
+  <div class="topbar-company">Estacionamento República</div>
+  <div class="topbar-actions">
+    <button class="btn btn-sm" style="background:rgba(255,255,255,.15);color:#fff;border:none" onclick="openModal('lancamento')">+ Lançamento</button>
+    <div class="topbar-sep hide-mobile"></div>
+    <div style="display:flex;gap:6px" class="hide-mobile">
+      <button class="btn btn-sm btn-ghost" style="border-color:rgba(255,255,255,.25);color:#fff" onclick="exportExcel()">Excel</button>
+      <button class="btn btn-sm btn-ghost" style="border-color:rgba(255,255,255,.25);color:#fff" onclick="exportCSV()">CSV</button>
+      <div style="position:relative">
+        <button class="btn btn-sm btn-ghost" style="border-color:rgba(255,255,255,.25);color:#fff" onclick="togglePdfMenu()">PDF ▾</button>
+        <div id="pdfMenu" class="hidden" style="position:absolute;right:0;top:110%;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-xs);box-shadow:var(--shadow-md);z-index:300;min-width:200px;overflow:hidden">
+          <div onclick="exportPDF('mensal')" style="padding:10px 14px;cursor:pointer;font-size:13px" onmouseover="this.style.background='var(--g50)'" onmouseout="this.style.background=''">📊 Mensal</div>
+          <div onclick="exportPDF('receitas')" style="padding:10px 14px;cursor:pointer;font-size:13px" onmouseover="this.style.background='var(--g50)'" onmouseout="this.style.background=''">📈 Receitas</div>
+          <div onclick="exportPDF('despesas')" style="padding:10px 14px;cursor:pointer;font-size:13px" onmouseover="this.style.background='var(--g50)'" onmouseout="this.style.background=''">📉 Despesas</div>
+          <div onclick="exportPDF('completo')" style="padding:10px 14px;cursor:pointer;font-size:13px" onmouseover="this.style.background='var(--g50)'" onmouseout="this.style.background=''">📋 Completo</div>
+        </div>
+      </div>
+    </div>
+    <dark-toggle class="dark-toggle" id="darkBtn" onclick="toggleDark()"></dark-toggle>
+  </div>
+</header>
+
+<!-- SIDEBAR -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+<aside class="sidebar" id="sidebar">
+  <nav>
+    <button class="nav-item active" data-page="dashboard" onclick="nav('dashboard')"><span>📊</span> Dashboard</button>
+    <button class="nav-item" data-page="lancamentos" onclick="nav('lancamentos')"><span>📋</span> Lançamentos</button>
+    <button class="nav-item" data-page="areceber" onclick="nav('areceber')"><span>📥</span> A Receber</button>
+    <button class="nav-item" data-page="apagar" onclick="nav('apagar')"><span>📤</span> A Pagar</button>
+    <button class="nav-item" data-page="relatorios" onclick="nav('relatorios')"><span>📈</span> Relatórios</button>
+    <button class="nav-item" data-page="comparativo" onclick="nav('comparativo')"><span>🔁</span> Comparativo</button>
+    <button class="nav-item" data-page="mensalistas" onclick="nav('mensalistas')"><span>🚗</span> Mensalistas</button>
+    <button class="nav-item" data-page="config" onclick="nav('config')"><span>⚙️</span> Configurações</button>
+  </nav>
+</aside>
+
+<!-- BOTTOM NAV (mobile) -->
+<nav class="bottom-nav">
+  <button class="bnav-item active" data-page="dashboard" onclick="nav('dashboard')"><span class="bnav-icon">📊</span>Dashboard</button>
+  <button class="bnav-item" data-page="lancamentos" onclick="nav('lancamentos')"><span class="bnav-icon">📋</span>Lançamentos</button>
+  <button class="bnav-item" data-page="areceber" onclick="nav('areceber')"><span class="bnav-icon">📥</span>A Receber</button>
+  <button class="bnav-item" data-page="apagar" onclick="nav('apagar')"><span class="bnav-icon">📤</span>A Pagar</button>
+  <button class="bnav-item" data-page="config" onclick="nav('config')"><span class="bnav-icon">⚙️</span>Mais</button>
+</nav>
+
+<!-- MAIN -->
+<main class="main">
+
+  <!-- DASHBOARD -->
+  <div class="page active" id="page-dashboard">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+      <div>
+        <div style="font-size:20px;font-weight:800">Lançamentos</div>
+        <div style="font-size:12px;color:var(--muted)" id="dashPeriodLabel">Estacionamento República</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <div class="period-tabs">
+          <button class="ptab active" id="pt-mes" onclick="setPeriod('mes')">Este mês</button>
+          <button class="ptab" id="pt-ant" onclick="setPeriod('ant')">Mês anterior</button>
+          <button class="ptab" id="pt-prx" onclick="setPeriod('prx')">Próximo mês</button>
+          <button class="ptab" id="pt-cus" onclick="setPeriod('cus')">Personalizado</button>
+        </div>
+      </div>
+    </div>
+    <div id="dashCustomRange" class="hidden" style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+      <input type="date" id="dIni" onchange="renderDash()" style="flex:1;min-width:130px">
+      <input type="date" id="dFim" onchange="renderDash()" style="flex:1;min-width:130px">
+    </div>
+    <!-- KPI cards -->
+    <div class="kpi-grid" id="dashKpis"></div>
+    <!-- Two column layout -->
+    <div style="display:grid;grid-template-columns:1fr;gap:14px" id="dashGrid">
+      <!-- Timeline -->
+      <div class="timeline" id="dashTimeline"></div>
+      <!-- Sidebar col on desktop -->
+      <div style="display:flex;flex-direction:column;gap:12px" id="dashSide">
+        <div class="card card-pad">
+          <div style="display:flex;gap:2px;background:var(--border);padding:3px;border-radius:var(--radius-xs);margin-bottom:14px">
+            <button class="ptab active" id="ctab-rec" onclick="setCatTab('rec')" style="flex:1">Receitas</button>
+            <button class="ptab" id="ctab-des" onclick="setCatTab('des')" style="flex:1">Despesas</button>
+          </div>
+          <div id="dashCatBars"></div>
+        </div>
+        <div class="card card-pad" id="dashResumoCard"></div>
+        <div class="card card-pad" style="background:var(--g50);border-color:var(--g400)" id="dashSaldoCard"></div>
+      </div>
+    </div>
+    <!-- Charts -->
+    <div style="display:grid;grid-template-columns:1fr;gap:12px;margin-top:14px" id="dashCharts">
+      <div class="chart-card"><div class="chart-title">Receita × Despesa por Dia</div><div class="chart-wrap"><canvas id="chDia"></canvas></div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="chart-card"><div class="chart-title">Receitas por Categoria</div><div class="chart-wrap"><canvas id="chRCat"></canvas></div></div>
+        <div class="chart-card"><div class="chart-title">Despesas por Categoria</div><div class="chart-wrap"><canvas id="chDCat"></canvas></div></div>
+      </div>
+      <div class="chart-card"><div class="chart-title">Comparativo Mensal</div><div class="chart-wrap"><canvas id="chMen"></canvas></div></div>
+    </div>
+  </div>
+
+  <!-- LANÇAMENTOS -->
+  <div class="page" id="page-lancamentos">
+    <div class="sec-header"><div class="sec-title">Lançamentos</div><button class="btn btn-primary btn-sm" onclick="openModal('lancamento')">+ Novo</button></div>
+    <div class="filter-bar">
+      <input type="date" id="fDi" onchange="renderLanc()">
+      <input type="date" id="fDf" onchange="renderLanc()">
+      <select id="fTipo" onchange="renderLanc()"><option value="">Tipo</option><option>Receita</option><option>Despesa</option><option value="Outros">Outros</option></select>
+      <select id="fCat" onchange="renderLanc()"><option value="">Categoria</option></select>
+      <input type="text" id="fBusca" placeholder="🔍 Buscar..." oninput="renderLanc()" style="min-width:120px">
+      <button class="btn btn-ghost btn-sm" onclick="clearFilters()">Limpar</button>
+    </div>
+    <div class="tbl-wrap" style="overflow-x:auto">
+      <table><thead><tr><th>Data</th><th>Tipo</th><th>Categoria</th><th>Pagamento</th><th>Valor</th><th>Recebimento</th><th>Status</th><th>Obs.</th><th></th></tr></thead>
+        <tbody id="lancTable"></tbody>
+      </table>
+    </div>
+    <div id="lancPages" style="display:flex;gap:6px;justify-content:flex-end;margin-top:12px"></div>
+  </div>
+
+  <!-- A RECEBER -->
+  <div class="page" id="page-areceber">
+    <div class="sec-header"><div class="sec-title">A Receber</div><button class="btn btn-primary btn-sm" onclick="openModal('lancamento',null,'Receita')">+ Receita</button></div>
+    <div class="kpi-grid" style="grid-template-columns:1fr 1fr 1fr" id="arKpis"></div>
+    <div id="arAlerts"></div>
+    <div class="tbl-wrap" style="overflow-x:auto">
+      <table><thead><tr><th>Data Venda</th><th>Categoria</th><th>Pagamento</th><th>Valor</th><th>Dt. Recebimento</th><th>Status</th><th></th></tr></thead>
+        <tbody id="arTable"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- A PAGAR -->
+  <div class="page" id="page-apagar">
+    <div class="sec-header"><div class="sec-title">A Pagar</div><button class="btn btn-primary btn-sm" onclick="openModal('lancamento',null,'Despesa')">+ Despesa</button></div>
+    <div class="kpi-grid" style="grid-template-columns:1fr 1fr 1fr" id="apKpis"></div>
+    <div id="apAlerts"></div>
+    <div class="tbl-wrap" style="overflow-x:auto">
+      <table><thead><tr><th>Data</th><th>Categoria</th><th>Pagamento</th><th>Valor</th><th>Dt. Pagamento</th><th>Status</th><th></th></tr></thead>
+        <tbody id="apTable"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- RELATÓRIOS -->
+  <div class="page" id="page-relatorios">
+    <div class="sec-header"><div class="sec-title">Relatórios</div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:500px">
+      <button class="btn btn-ghost" onclick="exportPDF('mensal')" style="height:80px;flex-direction:column;gap:4px;font-size:13px">📊<br>Mensal</button>
+      <button class="btn btn-ghost" onclick="exportPDF('receitas')" style="height:80px;flex-direction:column;gap:4px;font-size:13px">📈<br>Receitas</button>
+      <button class="btn btn-ghost" onclick="exportPDF('despesas')" style="height:80px;flex-direction:column;gap:4px;font-size:13px">📉<br>Despesas</button>
+      <button class="btn btn-ghost" onclick="exportPDF('completo')" style="height:80px;flex-direction:column;gap:4px;font-size:13px">📋<br>Completo</button>
+    </div>
+    <div style="margin-top:20px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-ghost btn-sm" onclick="exportExcel()">📥 Excel</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportCSV()">CSV</button>
+    </div>
+  </div>
+
+  <!-- COMPARATIVO -->
+  <div class="page" id="page-comparativo">
+    <div class="sec-header"><div class="sec-title">Comparativo de Períodos</div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+      <div class="card card-pad">
+        <div style="font-size:11px;font-weight:700;color:var(--g800);text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px">Período A</div>
+        <div class="form-row"><label class="form-label">De</label><input type="date" id="cA1" onchange="renderComp()"></div>
+        <div class="form-row"><label class="form-label">Até</label><input type="date" id="cA2" onchange="renderComp()"></div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap" id="cAQ"></div>
+      </div>
+      <div class="card card-pad">
+        <div style="font-size:11px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px">Período B</div>
+        <div class="form-row"><label class="form-label">De</label><input type="date" id="cB1" onchange="renderComp()"></div>
+        <div class="form-row"><label class="form-label">Até</label><input type="date" id="cB2" onchange="renderComp()"></div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap" id="cBQ"></div>
+      </div>
+    </div>
+    <div id="compCards"></div>
+    <div class="chart-card" style="margin-top:14px"><div class="chart-title">Receita × Despesa — A vs B</div><div class="chart-wrap" style="height:240px"><canvas id="chComp"></canvas></div></div>
+  </div>
+
+  <!-- MENSALISTAS -->
+  <div class="page" id="page-mensalistas">
+    <div class="sec-header"><div class="sec-title">Mensalistas</div><button class="btn btn-primary btn-sm" onclick="openModal('mensalista')">+ Cadastrar</button></div>
+    <div class="kpi-grid" id="mensKpis"></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px" id="mensGrid"></div>
+  </div>
+
+  <!-- CONFIG -->
+  <div class="page" id="page-config">
+    <div class="sec-title" style="margin-bottom:14px">Configurações</div>
+    <div style="display:flex;gap:2px;background:var(--border);padding:3px;border-radius:var(--radius-xs);margin-bottom:16px;width:fit-content">
+      <button class="ptab active" id="cfg-cats" onclick="showCfg('cats')">Categorias</button>
+      <button class="ptab" id="cfg-pags" onclick="showCfg('pags')">Pagamentos</button>
+      <button class="ptab" id="cfg-saldos" onclick="showCfg('saldos')">Saldos</button>
+      <button class="ptab" id="cfg-backup" onclick="showCfg('backup')">Backup</button>
+    </div>
+    <div id="cfgCats">
+      <div class="sec-header"><span style="font-weight:700;font-size:13px">Categorias de Receita</span><button class="btn btn-primary btn-sm" onclick="addCat('rec')">+</button></div>
+      <div id="catRecList" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px"></div>
+      <div class="sec-header"><span style="font-weight:700;font-size:13px">Categorias de Despesa</span><button class="btn btn-primary btn-sm" onclick="addCat('des')">+</button></div>
+      <div id="catDesList" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+    </div>
+    <div id="cfgPags" class="hidden">
+      <div class="sec-header"><span style="font-weight:700;font-size:13px">Formas de Pagamento</span><button class="btn btn-primary btn-sm" onclick="addPag()">+</button></div>
+      <div id="pagList" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+    </div>
+    <div id="cfgSaldos" class="hidden">
+      <div class="card card-pad" style="max-width:400px">
+        <div style="font-size:13px;font-weight:700;margin-bottom:14px">💰 Saldos Iniciais do Mês</div>
+        <div class="form-row"><label class="form-label">Data de Referência</label><input type="date" id="sRef"></div>
+        <div class="form-grid">
+          <div class="form-row"><label class="form-label">💵 Caixa (Dinheiro)</label><input type="number" id="sCaixa" step="0.01" placeholder="0,00"></div>
+          <div class="form-row"><label class="form-label">🏦 Banco (Stone)</label><input type="number" id="sBanco" step="0.01" placeholder="0,00"></div>
+        </div>
+        <button class="btn btn-primary" style="width:100%" onclick="saveSaldos()">💾 Salvar</button>
+        <div id="saldoCalc" style="margin-top:14px;font-size:12px;color:var(--muted)"></div>
+      </div>
+    </div>
+    <div id="cfgBackup" class="hidden">
+      <div class="card card-pad" style="max-width:400px">
+        <div style="font-size:13px;font-weight:700;margin-bottom:12px">Backup dos Dados</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="doBackup()">⬇ Exportar</button>
+          <label class="btn btn-ghost" style="cursor:pointer">⬆ Importar<input type="file" accept=".json" onchange="importBackup(event)" style="display:none"></label>
+          <label class="btn btn-ghost" style="cursor:pointer">📂 Excel<input type="file" accept=".xlsx" onchange="importExcel(event)" style="display:none"></label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- MODAL -->
+<div class="modal-overlay hidden" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="modalBox"></div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════════
+const SEED=[{"Data":"2026-05-31","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Pix","Valor":95.0,"Observações":""},{"Data":"2026-05-31","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Débito","Valor":220.0,"Observações":""},{"Data":"2026-05-31","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Crédito","Valor":85.0,"Observações":""},{"Data":"2026-05-31","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Dinheiro","Valor":20.0,"Observações":""},{"Data":"2026-05-31","Tipo":"Despesa","Categoria":"Salários","Pagamento":"Pix","Valor":120.0,"Observações":"Rafael"},{"Data":"2026-05-30","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Pix","Valor":30.0,"Observações":""},{"Data":"2026-05-30","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Débito","Valor":210.0,"Observações":""},{"Data":"2026-05-30","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Crédito","Valor":85.0,"Observações":""},{"Data":"2026-05-30","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Dinheiro","Valor":40.0,"Observações":""},{"Data":"2026-05-30","Tipo":"Receita","Categoria":"Mensalista","Pagamento":"Dinheiro","Valor":450.0,"Observações":"Vinicius Rocha"},{"Data":"2026-05-30","Tipo":"Receita","Categoria":"Mensalista","Pagamento":"Dinheiro","Valor":600.0,"Observações":"Thiago Nelz"},{"Data":"2026-05-29","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Pix","Valor":20.0,"Observações":""},{"Data":"2026-05-29","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Débito","Valor":110.0,"Observações":""},{"Data":"2026-05-29","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Crédito","Valor":20.0,"Observações":""},{"Data":"2026-05-29","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Dinheiro","Valor":15.0,"Observações":""},{"Data":"2026-05-29","Tipo":"Receita","Categoria":"Mensalista","Pagamento":"Dinheiro","Valor":120.0,"Observações":"AP 807"},{"Data":"2026-05-29","Tipo":"Receita","Categoria":"Mensalista","Pagamento":"Dinheiro","Valor":400.0,"Observações":"Mensalista Marcelo Bueno"},{"Data":"2026-05-28","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Débito","Valor":85.0,"Observações":""},{"Data":"2026-05-28","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Crédito","Valor":130.0,"Observações":""},{"Data":"2026-05-27","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Pix","Valor":35.0,"Observações":""},{"Data":"2026-05-27","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Débito","Valor":20.0,"Observações":""},{"Data":"2026-05-27","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Crédito","Valor":60.0,"Observações":""},{"Data":"2026-05-27","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Dinheiro","Valor":45.0,"Observações":""},{"Data":"2026-05-26","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Pix","Valor":25.0,"Observações":""},{"Data":"2026-05-26","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Crédito","Valor":40.0,"Observações":""},{"Data":"2026-05-26","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Débito","Valor":30.0,"Observações":""},{"Data":"2026-05-26","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Dinheiro","Valor":25.0,"Observações":""},{"Data":"2026-05-25","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Pix","Valor":45.0,"Observações":""},{"Data":"2026-05-25","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Crédito","Valor":40.0,"Observações":""},{"Data":"2026-05-25","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Débito","Valor":120.0,"Observações":""},{"Data":"2026-05-25","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Dinheiro","Valor":10.0,"Observações":""},{"Data":"2026-05-25","Tipo":"Despesa","Categoria":"Pró-labore","Pagamento":"Dinheiro","Valor":500.0,"Observações":""},{"Data":"2026-05-25","Tipo":"Despesa","Categoria":"Salários","Pagamento":"Dinheiro","Valor":1000.0,"Observações":""},{"Data":"2026-05-24","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Pix","Valor":35.0,"Observações":""},{"Data":"2026-05-24","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Débito","Valor":30.0,"Observações":""},{"Data":"2026-05-24","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Crédito","Valor":145.0,"Observações":""},{"Data":"2026-05-23","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Dinheiro","Valor":30.0,"Observações":""},{"Data":"2026-05-23","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Pix","Valor":75.0,"Observações":""},{"Data":"2026-05-23","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Débito","Valor":150.0,"Observações":""},{"Data":"2026-05-23","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Crédito","Valor":45.0,"Observações":""},{"Data":"2026-05-22","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Débito","Valor":50.0,"Observações":""},{"Data":"2026-05-22","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Débito","Valor":150.0,"Observações":""},{"Data":"2026-05-22","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Crédito","Valor":65.0,"Observações":""},{"Data":"2026-05-21","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Crédito","Valor":120.0,"Observações":""},{"Data":"2026-05-21","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Débito","Valor":75.0,"Observações":""},{"Data":"2026-05-20","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Pix","Valor":65.0,"Observações":""},{"Data":"2026-05-20","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Débito","Valor":100.0,"Observações":""},{"Data":"2026-05-20","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Crédito","Valor":90.0,"Observações":""},{"Data":"2026-05-20","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Débito","Valor":60.0,"Observações":""},{"Data":"2026-05-20","Tipo":"Despesa","Categoria":"Salários","Pagamento":"Pix","Valor":200.0,"Observações":""},{"Data":"2026-05-19","Tipo":"Despesa","Categoria":"Darf Simples","Pagamento":"Boleto","Valor":345.95,"Observações":""},{"Data":"2026-05-19","Tipo":"Despesa","Categoria":"Das Simples","Pagamento":"Boleto","Valor":450.83,"Observações":""},{"Data":"2026-05-19","Tipo":"Despesa","Categoria":"FGTS","Pagamento":"Boleto","Valor":170.63,"Observações":""},{"Data":"2026-05-19","Tipo":"Despesa","Categoria":"Contador","Pagamento":"Boleto","Valor":1000.0,"Observações":""},{"Data":"2026-05-19","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Dinheiro","Valor":55.0,"Observações":""},{"Data":"2026-05-19","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Débito","Valor":80.0,"Observações":""},{"Data":"2026-05-19","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Crédito","Valor":70.0,"Observações":""},{"Data":"2026-05-18","Tipo":"Despesa","Categoria":"Sistema Dimep","Pagamento":"Boleto","Valor":398.0,"Observações":""},{"Data":"2026-05-18","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Crédito","Valor":65.0,"Observações":""},{"Data":"2026-05-18","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Débito","Valor":20.0,"Observações":""},{"Data":"2026-05-18","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Pix","Valor":55.0,"Observações":""},{"Data":"2026-05-17","Tipo":"Despesa","Categoria":"Salários","Pagamento":"Dinheiro","Valor":1000.0,"Observações":""},{"Data":"2026-05-17","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Débito","Valor":30.0,"Observações":""},{"Data":"2026-05-17","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Crédito","Valor":80.0,"Observações":""},{"Data":"2026-05-17","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Dinheiro","Valor":35.0,"Observações":""},{"Data":"2026-05-16","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Dinheiro","Valor":60.0,"Observações":""},{"Data":"2026-05-16","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Débito","Valor":120.0,"Observações":""},{"Data":"2026-05-16","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Crédito","Valor":215.0,"Observações":""},{"Data":"2026-05-16","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Pix","Valor":35.0,"Observações":""},{"Data":"2026-05-15","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Pix","Valor":75.0,"Observações":""},{"Data":"2026-05-15","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Crédito","Valor":70.0,"Observações":""},{"Data":"2026-05-15","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Débito","Valor":110.0,"Observações":""},{"Data":"2026-05-14","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Dinheiro","Valor":25.0,"Observações":""},{"Data":"2026-05-14","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Crédito","Valor":205.0,"Observações":""},{"Data":"2026-05-14","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Débito","Valor":125.0,"Observações":""},{"Data":"2026-05-13","Tipo":"Despesa","Categoria":"CEEE","Pagamento":"Boleto","Valor":1129.17,"Observações":""},{"Data":"2026-05-13","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Pix","Valor":20.0,"Observações":""},{"Data":"2026-05-13","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Dinheiro","Valor":20.0,"Observações":""},{"Data":"2026-05-13","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Débito","Valor":105.0,"Observações":""},{"Data":"2026-05-12","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Crédito","Valor":120.0,"Observações":""},{"Data":"2026-05-12","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Pix","Valor":40.0,"Observações":""},{"Data":"2026-05-12","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Débito","Valor":20.0,"Observações":""},{"Data":"2026-05-12","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Pix","Valor":80.0,"Observações":""},{"Data":"2026-05-11","Tipo":"Receita","Categoria":"Mensalista","Pagamento":"Dinheiro","Valor":225.0,"Observações":"Mensalista Alexandre Felix"},{"Data":"2026-05-11","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Pix","Valor":55.0,"Observações":""},{"Data":"2026-05-11","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Débito","Valor":25.0,"Observações":""},{"Data":"2026-05-11","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Dinheiro","Valor":40.0,"Observações":""},{"Data":"2026-05-11","Tipo":"Receita","Categoria":"Mensalista","Pagamento":"Dinheiro","Valor":750.0,"Observações":"Leonardo Press café"},{"Data":"2026-05-10","Tipo":"Despesa","Categoria":"Salários","Pagamento":"Dinheiro","Valor":1000.0,"Observações":""},{"Data":"2026-05-10","Tipo":"Receita","Categoria":"Mensalista","Pagamento":"Pix","Valor":500.0,"Observações":"Mensalidade Gustavo"},{"Data":"2026-05-10","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Crédito","Valor":55.0,"Observações":""},{"Data":"2026-05-10","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Dinheiro","Valor":35.0,"Observações":""},{"Data":"2026-05-10","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Pix","Valor":20.0,"Observações":""},{"Data":"2026-05-10","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Débito","Valor":90.0,"Observações":""},{"Data":"2026-05-10","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Pix","Valor":40.0,"Observações":""},{"Data":"2026-05-09","Tipo":"Receita","Categoria":"Mensalista","Pagamento":"Dinheiro","Valor":600.0,"Observações":"Mensalidade Japesca"},{"Data":"2026-05-09","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Débito","Valor":215.0,"Observações":""},{"Data":"2026-05-09","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Pix","Valor":140.0,"Observações":""},{"Data":"2026-05-09","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Crédito","Valor":155.0,"Observações":""},{"Data":"2026-05-09","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Dinheiro","Valor":50.0,"Observações":""},{"Data":"2026-05-08","Tipo":"Despesa","Categoria":"Condomínio","Pagamento":"Boleto","Valor":2263.98,"Observações":""},{"Data":"2026-05-08","Tipo":"Receita","Categoria":"Mensalista","Pagamento":"Débito","Valor":200.0,"Observações":"Mensalidade moto moinhos"},{"Data":"2026-05-08","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Dinheiro","Valor":60.0,"Observações":""},{"Data":"2026-05-08","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Pix","Valor":15.0,"Observações":""},{"Data":"2026-05-08","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Crédito","Valor":50.0,"Observações":""},{"Data":"2026-05-08","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Débito","Valor":65.0,"Observações":""},{"Data":"2026-05-07","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Pix","Valor":20.0,"Observações":""},{"Data":"2026-05-07","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Crédito","Valor":20.0,"Observações":""},{"Data":"2026-05-07","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Débito","Valor":145.0,"Observações":""},{"Data":"2026-05-06","Tipo":"Despesa","Categoria":"Extras","Pagamento":"Dinheiro","Valor":680.0,"Observações":""},{"Data":"2026-05-06","Tipo":"Despesa","Categoria":"Associação","Pagamento":"Boleto","Valor":150.0,"Observações":""},{"Data":"2026-05-06","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Pix","Valor":50.0,"Observações":""},{"Data":"2026-05-06","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Crédito","Valor":105.0,"Observações":""},{"Data":"2026-05-06","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Dinheiro","Valor":140.0,"Observações":"Seu Luzardo"},{"Data":"2026-05-06","Tipo":"Receita","Categoria":"Mensalista","Pagamento":"Dinheiro","Valor":200.0,"Observações":"Ap 807"},{"Data":"2026-05-06","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Débito","Valor":80.0,"Observações":""},{"Data":"2026-05-06","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Dinheiro","Valor":20.0,"Observações":""},{"Data":"2026-05-05","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Pix","Valor":55.0,"Observações":""},{"Data":"2026-05-05","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Crédito","Valor":55.0,"Observações":""},{"Data":"2026-05-05","Tipo":"Receita","Categoria":"Mensalista","Pagamento":"Dinheiro","Valor":450.0,"Observações":"Mensalidade Silvia"},{"Data":"2026-05-05","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Dinheiro","Valor":35.0,"Observações":""},{"Data":"2026-05-05","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Débito","Valor":40.0,"Observações":""},{"Data":"2026-05-04","Tipo":"Despesa","Categoria":"Outros","Pagamento":"Boleto","Valor":229.17,"Observações":"Dimep Treinamento"},{"Data":"2026-05-04","Tipo":"Despesa","Categoria":"Outros","Pagamento":"Boleto","Valor":291.67,"Observações":"Dimep Instalação"},{"Data":"2026-05-04","Tipo":"Despesa","Categoria":"Internet/Celular","Pagamento":"Boleto","Valor":159.79,"Observações":""},{"Data":"2026-05-04","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Pix","Valor":70.0,"Observações":""},{"Data":"2026-05-04","Tipo":"Receita","Categoria":"Mensalista","Pagamento":"Pix","Valor":200.0,"Observações":"Mensalidade Larrisa Liberato"},{"Data":"2026-05-04","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Débito","Valor":145.0,"Observações":""},{"Data":"2026-05-04","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Crédito","Valor":95.0,"Observações":""},{"Data":"2026-05-04","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Dinheiro","Valor":15.0,"Observações":""},{"Data":"2026-05-04","Tipo":"Receita","Categoria":"Mensalista","Pagamento":"Dinheiro","Valor":400.0,"Observações":"Mensalidade Ricardo Machado"},{"Data":"2026-05-03","Tipo":"Receita","Categoria":"Mensalista","Pagamento":"Crédito","Valor":500.0,"Observações":"Mensalidade Luciana"},{"Data":"2026-05-03","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Débito","Valor":10.0,"Observações":""},{"Data":"2026-05-03","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Pix","Valor":50.0,"Observações":""},{"Data":"2026-05-03","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Crédito","Valor":95.0,"Observações":""},{"Data":"2026-05-03","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Dinheiro","Valor":40.0,"Observações":""},{"Data":"2026-05-02","Tipo":"Despesa","Categoria":"Salários","Pagamento":"Dinheiro","Valor":1000.0,"Observações":""},{"Data":"2026-05-02","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Crédito","Valor":115.0,"Observações":""},{"Data":"2026-05-02","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Pix","Valor":15.0,"Observações":""},{"Data":"2026-05-02","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Débito","Valor":90.0,"Observações":""},{"Data":"2026-05-02","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Dinheiro","Valor":25.0,"Observações":""},{"Data":"2026-05-01","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Débito","Valor":105.0,"Observações":""},{"Data":"2026-05-01","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Crédito","Valor":110.0,"Observações":""},{"Data":"2026-05-01","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Dinheiro","Valor":60.0,"Observações":""},{"Data":"2026-05-01","Tipo":"Receita","Categoria":"Mensalista","Pagamento":"Dinheiro","Valor":350.0,"Observações":"Mensalidade José Farias"},{"Data":"2026-05-01","Tipo":"Receita","Categoria":"Mensalista","Pagamento":"Dinheiro","Valor":450.0,"Observações":"Mensalidade Vinicius"},{"Data":"2026-06-23","Tipo":"Despesa","Categoria":"Extras","Pagamento":"Dinheiro","Valor":510.0,"Observações":"Roberto"},{"Data":"2026-06-22","Tipo":"Despesa","Categoria":"Sistema Dimep","Pagamento":"Boleto","Valor":398.0,"Observações":"Mensalidade"},{"Data":"2026-06-20","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Pix","Valor":15.0,"Observações":"Dia 20 a 22"},{"Data":"2026-06-20","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Débito","Valor":290.0,"Observações":"Dia 20 a 22"},{"Data":"2026-06-20","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Crédito","Valor":145.0,"Observações":"Dia 20 a 22"},{"Data":"2026-06-20","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Dinheiro","Valor":90.0,"Observações":"Dia 20 a 22"},{"Data":"2026-06-20","Tipo":"Despesa","Categoria":"Salários","Pagamento":"Dinheiro","Valor":750.0,"Observações":"Rafael"},{"Data":"2026-06-19","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Pix","Valor":110.0,"Observações":""},{"Data":"2026-06-19","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Débito","Valor":215.0,"Observações":""},{"Data":"2026-06-19","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Crédito","Valor":75.0,"Observações":""},{"Data":"2026-06-19","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Dinheiro","Valor":30.0,"Observações":""},{"Data":"2026-06-18","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Pix","Valor":35.0,"Observações":""},{"Data":"2026-06-18","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Débito","Valor":45.0,"Observações":""},{"Data":"2026-06-18","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Crédito","Valor":40.0,"Observações":""},{"Data":"2026-06-18","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Dinheiro","Valor":20.0,"Observações":""},{"Data":"2026-06-17","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Débito","Valor":105.0,"Observações":""},{"Data":"2026-06-17","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Crédito","Valor":55.0,"Observações":""},{"Data":"2026-06-17","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Dinheiro","Valor":60.0,"Observações":""},{"Data":"2026-06-17","Tipo":"Despesa","Categoria":"FGTS","Pagamento":"Boleto","Valor":170.63,"Observações":""},{"Data":"2026-06-17","Tipo":"Despesa","Categoria":"Darf Simples","Pagamento":"Boleto","Valor":473.76,"Observações":""},{"Data":"2026-06-17","Tipo":"Despesa","Categoria":"Das Simples","Pagamento":"Boleto","Valor":345.95,"Observações":""},{"Data":"2026-06-16","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Débito","Valor":90.0,"Observações":""},{"Data":"2026-06-16","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Crédito","Valor":150.0,"Observações":""},{"Data":"2026-06-16","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Dinheiro","Valor":10.0,"Observações":""},{"Data":"2026-06-15","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Débito","Valor":155.0,"Observações":""},{"Data":"2026-06-15","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Crédito","Valor":40.0,"Observações":""},{"Data":"2026-06-15","Tipo":"Despesa","Categoria":"Associação","Pagamento":"Boleto","Valor":150.0,"Observações":""},{"Data":"2026-06-15","Tipo":"Despesa","Categoria":"Contador","Pagamento":"Boleto","Valor":1000.0,"Observações":""},{"Data":"2026-06-15","Tipo":"Despesa","Categoria":"Sistema Dimep","Pagamento":"Boleto","Valor":2916.85,"Observações":"Cancela"},{"Data":"2026-06-15","Tipo":"Despesa","Categoria":"Extras","Pagamento":"Dinheiro","Valor":300.0,"Observações":"Roberto"},{"Data":"2026-06-14","Tipo":"Despesa","Categoria":"Salários","Pagamento":"Dinheiro","Valor":750.0,"Observações":"Rafael"},{"Data":"2026-06-14","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Dinheiro","Valor":60.0,"Observações":""},{"Data":"2026-06-14","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Débito","Valor":85.0,"Observações":""},{"Data":"2026-06-14","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Crédito","Valor":65.0,"Observações":""},{"Data":"2026-06-13","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Pix","Valor":75.0,"Observações":""},{"Data":"2026-06-13","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Débito","Valor":155.0,"Observações":""},{"Data":"2026-06-13","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Crédito","Valor":245.0,"Observações":""},{"Data":"2026-06-13","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Dinheiro","Valor":150.0,"Observações":""},{"Data":"2026-06-12","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Dinheiro","Valor":35.0,"Observações":""},{"Data":"2026-06-12","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Pix","Valor":20.0,"Observações":""},{"Data":"2026-06-12","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Débito","Valor":225.0,"Observações":""},{"Data":"2026-06-12","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Crédito","Valor":145.0,"Observações":""},{"Data":"2026-06-12","Tipo":"Receita","Categoria":"Mensalista","Pagamento":"Dinheiro","Valor":500.0,"Observações":"Leonardo Press café"},{"Data":"2026-06-11","Tipo":"Receita","Categoria":"Mensalista","Pagamento":"Pix","Valor":200.0,"Observações":"Juliano Lazzari"},{"Data":"2026-06-11","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Pix","Valor":10.0,"Observações":""},{"Data":"2026-06-11","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Débito","Valor":125.0,"Observações":""},{"Data":"2026-06-11","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Crédito","Valor":105.0,"Observações":""},{"Data":"2026-06-11","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Dinheiro","Valor":30.0,"Observações":""},{"Data":"2026-06-11","Tipo":"Despesa","Categoria":"CEEE","Pagamento":"Boleto","Valor":1199.67,"Observações":""},{"Data":"2026-06-10","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Crédito","Valor":15.0,"Observações":""},{"Data":"2026-06-10","Tipo":"Receita","Categoria":"Mensalista","Pagamento":"Dinheiro","Valor":600.0,"Observações":"Japesca"},{"Data":"2026-06-10","Tipo":"Receita","Categoria":"Mensalista","Pagamento":"Dinheiro","Valor":225.0,"Observações":"Alexandre Felix"},{"Data":"2026-06-10","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Débito","Valor":55.0,"Observações":""},{"Data":"2026-06-10","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Dinheiro","Valor":45.0,"Observações":""},{"Data":"2026-06-09","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Pix","Valor":10.0,"Observações":""},{"Data":"2026-06-09","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Débito","Valor":90.0,"Observações":""},{"Data":"2026-06-09","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Crédito","Valor":370.0,"Observações":""},{"Data":"2026-06-09","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Dinheiro","Valor":35.0,"Observações":""},{"Data":"2026-06-08","Tipo":"Receita","Categoria":"Mensalista","Pagamento":"Débito","Valor":25.0,"Observações":""},{"Data":"2026-06-08","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Crédito","Valor":30.0,"Observações":""},{"Data":"2026-06-07","Tipo":"Despesa","Categoria":"Salários","Pagamento":"Dinheiro","Valor":750.0,"Observações":"Rafael"},{"Data":"2026-06-07","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Pix","Valor":75.0,"Observações":""},{"Data":"2026-06-07","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Débito","Valor":75.0,"Observações":""},{"Data":"2026-06-07","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Crédito","Valor":325.0,"Observações":""},{"Data":"2026-06-07","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Dinheiro","Valor":10.0,"Observações":""},{"Data":"2026-06-06","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Pix","Valor":40.0,"Observações":""},{"Data":"2026-06-06","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Débito","Valor":130.0,"Observações":""},{"Data":"2026-06-06","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Crédito","Valor":60.0,"Observações":""},{"Data":"2026-06-06","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Dinheiro","Valor":40.0,"Observações":""},{"Data":"2026-06-05","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Pix","Valor":15.0,"Observações":""},{"Data":"2026-06-05","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Débito","Valor":70.0,"Observações":""},{"Data":"2026-06-05","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Crédito","Valor":35.0,"Observações":""},{"Data":"2026-06-05","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Dinheiro","Valor":70.0,"Observações":""},{"Data":"2026-06-05","Tipo":"Despesa","Categoria":"Internet/Celular","Pagamento":"Boleto","Valor":159.79,"Observações":""},{"Data":"2026-06-05","Tipo":"Despesa","Categoria":"Condomínio","Pagamento":"Boleto","Valor":2097.35,"Observações":""},{"Data":"2026-06-04","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Pix","Valor":35.0,"Observações":""},{"Data":"2026-06-04","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Débito","Valor":130.0,"Observações":""},{"Data":"2026-06-04","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Crédito","Valor":65.0,"Observações":""},{"Data":"2026-06-03","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Pix","Valor":15.0,"Observações":""},{"Data":"2026-06-03","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Débito","Valor":145.0,"Observações":""},{"Data":"2026-06-03","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Crédito","Valor":50.0,"Observações":""},{"Data":"2026-06-03","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Dinheiro","Valor":10.0,"Observações":""},{"Data":"2026-06-03","Tipo":"Receita","Categoria":"Mensalista","Pagamento":"Crédito","Valor":450.0,"Observações":"Luciana Siqueira"},{"Data":"2026-06-03","Tipo":"Receita","Categoria":"Mensalista","Pagamento":"Crédito","Valor":450.0,"Observações":"Gustavo Fortes"},{"Data":"2026-06-02","Tipo":"Despesa","Categoria":"Extras","Pagamento":"Dinheiro","Valor":340.0,"Observações":"Roberto"},{"Data":"2026-06-02","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Pix","Valor":15.0,"Observações":""},{"Data":"2026-06-02","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Débito","Valor":105.0,"Observações":""},{"Data":"2026-06-02","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Crédito","Valor":105.0,"Observações":""},{"Data":"2026-06-02","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Dinheiro","Valor":20.0,"Observações":""},{"Data":"2026-06-02","Tipo":"Receita","Categoria":"Mensalista","Pagamento":"Dinheiro","Valor":350.0,"Observações":"José Farias"},{"Data":"2026-06-02","Tipo":"Receita","Categoria":"Mensalista","Pagamento":"Dinheiro","Valor":400.0,"Observações":"Silvia"},{"Data":"2026-06-01","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Pix","Valor":15.0,"Observações":""},{"Data":"2026-06-01","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Débito","Valor":60.0,"Observações":""},{"Data":"2026-06-01","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Crédito","Valor":45.0,"Observações":""},{"Data":"2026-06-01","Tipo":"Receita","Categoria":"Mensalista","Pagamento":"Dinheiro","Valor":400.0,"Observações":"Ricardo Machado"},{"Data":"2026-06-01","Tipo":"Receita","Categoria":"Rotativo","Pagamento":"Dinheiro","Valor":20.0,"Observações":""},{"Data":"2026-06-01","Tipo":"Despesa","Categoria":"Outros","Pagamento":"Boleto","Valor":229.17,"Observações":"Dimep Treinamento"},{"Data":"2026-06-01","Tipo":"Despesa","Categoria":"Outros","Pagamento":"Boleto","Valor":291.67,"Observações":"Dimep Instalação"},{"Data":"2026-06-01","Tipo":"Despesa","Categoria":"Salários","Pagamento":"Dinheiro","Valor":1000.0,"Observações":"Rafael"}];
+
+// ─── State ───────────────────────────────────────
+function sv(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+function lv(k,d){try{const v=localStorage.getItem(k);return v!=null?JSON.parse(v):d}catch(e){return d}}
+
+// Migrate old data from previous system
+function migrateOldData(){
+  const old=lv('rdb_lancamentos',null);
+  if(old&&old.length>SEED.length){return old;}
+  return null;
+}
+
+const oldDB=migrateOldData();
+let DB=lv('rep2_db', oldDB||SEED.map((r,i)=>({
+  ...r,
+  id:i+1,
+  DataRecebimento:r.Data, // for old records: recebimento = data
+  Status:r.Tipo==='Receita'?'Recebido':'Pago'
+})));
+
+// If migrated from old system, add DataRecebimento to old records
+if(DB.length>0&&!DB[0].DataRecebimento){
+  DB=DB.map(r=>({...r,DataRecebimento:r.Data,Status:r.Tipo==='Receita'?'Recebido':'Pago'}));
+  sv('rep2_db',DB);
+}
+
+let CATS_REC=lv('rep2_cats_rec',['Rotativo','Mensalista','Convênio','Diária','Outros']);
+let CATS_DES=lv('rep2_cats_des',['Salários','Internet','Energia/Luz','Sistema','Impostos','Associação','Manutenção','Extras','Condomínio','FGTS','Das Simples','Darf Simples','Contador','CEEE','Pró-labore','Outros']);
+let PAGS=lv('rep2_pags',['Pix','Dinheiro','Débito','Crédito','Boleto','Transferência']);
+let MENSALISTAS=lv('rep2_mens',[]);
+let SALDOS=lv('rep2_saldos',{ref:'2026-09-01',banco:6682.51,caixa:6750.00});
+let COUNTERS=lv('rep2_cnt',{db:245,mens:0});
+
+function saveAll(){
+  sv('rep2_db',DB);sv('rep2_cats_rec',CATS_REC);sv('rep2_cats_des',CATS_DES);
+  sv('rep2_pags',PAGS);sv('rep2_mens',MENSALISTAS);
+  sv('rep2_saldos',SALDOS);sv('rep2_cnt',COUNTERS);
+}
+
+// ─── Utils ────────────────────────────────────────
+const brl=v=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(v||0);
+const pct=(a,b)=>b?((a-b)/Math.abs(b)*100).toFixed(1):0;
+const today=()=>new Date().toISOString().slice(0,10);
+const fmtDate=d=>{if(!d)return'';const[y,m,di]=d.split('-');return`${di}/${m}/${y}`};
+const sumBy=(arr,k='Valor')=>arr.reduce((s,r)=>s+(r[k]||0),0);
+const groupBy=(arr,k)=>arr.reduce((a,r)=>{(a[r[k]]=a[r[k]]||[]).push(r);return a},{});
+
+// ─── Period logic ─────────────────────────────────
+let period='mes';
+let catTab='rec';
+
+function getPeriod(){
+  const now=new Date();
+  const y=now.getFullYear(),m=now.getMonth();
+  if(period==='mes'){
+    return{ini:`${y}-${String(m+1).padStart(2,'0')}-01`,fim:new Date(y,m+1,0).toISOString().slice(0,10)};
+  }
+  if(period==='ant'){
+    const pm=m===0?11:m-1,py=m===0?y-1:y;
+    return{ini:`${py}-${String(pm+1).padStart(2,'0')}-01`,fim:new Date(py,pm+1,0).toISOString().slice(0,10)};
+  }
+  if(period==='prx'){
+    const nm=m===11?0:m+1,ny=m===11?y+1:y;
+    return{ini:`${ny}-${String(nm+1).padStart(2,'0')}-01`,fim:new Date(ny,nm+1,0).toISOString().slice(0,10)};
+  }
+  return{ini:document.getElementById('dIni')?.value||'',fim:document.getElementById('dFim')?.value||''};
+}
+
+function getFiltered(useDate='Data'){
+  const {ini,fim}=getPeriod();
+  return DB.filter(r=>(!ini||r[useDate]>=ini)&&(!fim||r[useDate]<=fim));
+}
+
+function setPeriod(p){
+  period=p;
+  ['mes','ant','prx','cus'].forEach(x=>{
+    document.getElementById('pt-'+x)?.classList.toggle('active',x===p);
+  });
+  const cr=document.getElementById('dashCustomRange');
+  if(cr)cr.style.display=p==='cus'?'flex':'none';
+  if(p!=='cus')renderDash();
+}
+
+function setCatTab(t){
+  catTab=t;
+  document.getElementById('ctab-rec')?.classList.toggle('active',t==='rec');
+  document.getElementById('ctab-des')?.classList.toggle('active',t==='des');
+  renderCatBars(getFiltered());
+}
+
+// ─── Status logic ─────────────────────────────────
+// Receita: Recebido / A Receber (DataRecebimento > today)
+// Despesa: Pago / A Pagar (DataRecebimento > today)
+function getStatus(r){
+  if(r.Status)return r.Status;
+  const td=today();
+  if(r.Tipo==='Receita'||r.Tipo==='Entrada no Banco')
+    return(r.DataRecebimento&&r.DataRecebimento>td)?'A Receber':'Recebido';
+  if(r.Tipo==='Despesa')
+    return(r.DataRecebimento&&r.DataRecebimento>td)?'A Pagar':'Pago';
+  return'Recebido';
+}
+
+function statusBadge(s){
+  if(s==='Recebido')return'<span class="badge badge-green">✓ Recebido</span>';
+  if(s==='Pago')return'<span class="badge badge-green">✓ Pago</span>';
+  if(s==='A Receber')return'<span class="badge badge-amber">⏳ A Receber</span>';
+  if(s==='A Pagar')return'<span class="badge badge-red">⏳ A Pagar</span>';
+  return`<span class="badge badge-gray">${s}</span>`;
+}
+
+// ─── Saldo real ───────────────────────────────────
+const BANCO_REC=['Pix','Débito','Transferência','Crédito'];
+const BANCO_DES=['Pix','Débito','Transferência','Boleto'];
+const DIN=['Dinheiro'];
+
+function calcSaldo(){
+  const ref=SALDOS.ref;
+  const movs=DB.filter(r=>(r.DataRecebimento||r.Data)>=ref&&getStatus(r)!=='A Receber'&&getStatus(r)!=='A Pagar');
+  const entDin=sumBy(movs.filter(r=>r.Tipo==='Receita'&&DIN.includes(r.Pagamento)));
+  const saiDin=sumBy(movs.filter(r=>r.Tipo==='Despesa'&&DIN.includes(r.Pagamento)));
+  const caixa=SALDOS.caixa+entDin-saiDin;
+  const entBan=sumBy(movs.filter(r=>r.Tipo==='Receita'&&BANCO_REC.includes(r.Pagamento)));
+  const entBan2=sumBy(movs.filter(r=>r.Tipo==='Entrada no Banco'));
+  const saiBan=sumBy(movs.filter(r=>r.Tipo==='Despesa'&&BANCO_DES.includes(r.Pagamento)));
+  const banco=SALDOS.banco+entBan+entBan2-saiBan;
+  const aReceber=sumBy(DB.filter(r=>getStatus(r)==='A Receber'));
+  const aPagar=sumBy(DB.filter(r=>getStatus(r)==='A Pagar'));
+  return{caixa,banco,total:caixa+banco,aReceber,aPagar,projecao:caixa+banco+aReceber-aPagar};
+}
+
+// ─── Charts ───────────────────────────────────────
+const charts={};
+const PAL=['#0F5132','#28a766','#5cb88a','#1a7348','#93c5a4','#a3e3bc','#0a3d26','#34d389'];
+const PAL_R=['#dc2626','#ef4444','#f87171','#fca5a5','#fecdd3'];
+function gc(){return getComputedStyle(document.documentElement)}
+function colors(){const s=gc();return{t:s.getPropertyValue('--text').trim(),m:s.getPropertyValue('--muted').trim(),b:s.getPropertyValue('--border').trim()}}
+function mkChart(id,cfg){if(charts[id]){charts[id].destroy();delete charts[id];}const el=document.getElementById(id);if(!el)return;charts[id]=new Chart(el,cfg);}
+
+// ─── MONTH NAMES ──────────────────────────────────
+const MN=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+function monthLabel(k){if(!k)return'';const[y,m]=k.split('-');return`${MN[parseInt(m,10)-1]} ${y}`;}
+function monthKey(d){return d?d.slice(0,7):''}
+
+// ═══════════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════════
+function renderDash(){
+  const {ini,fim}=getPeriod();
+  const lbl=ini&&fim?`${fmtDate(ini)} a ${fmtDate(fim)}`:'Estacionamento República';
+  const el=document.getElementById('dashPeriodLabel');if(el)el.textContent=lbl;
+
+  // For "Próximo mês", filter by DataRecebimento to show what will be received
+  const useDate=period==='prx'?'DataRecebimento':'Data';
+  const filtered=getFiltered(useDate);
+  const rec=filtered.filter(r=>r.Tipo==='Receita');
+  const des=filtered.filter(r=>r.Tipo==='Despesa');
+  // Separate: receitas já recebidas vs ainda a receber
+  const recRecebidas=rec.filter(r=>getStatus(r)==='Recebido');
+  const recAReceber=rec.filter(r=>getStatus(r)==='A Receber');
+  const totalVendas=sumBy(rec);           // total vendido no período (inclui a receber)
+  const totalRecebido=sumBy(recRecebidas); // só o que entrou no caixa
+  const totalARec=sumBy(recAReceber);      // ainda não recebido
+  const totalRec=totalVendas;             // para gráficos e comparativos
+  const totalDes=sumBy(des),resultado=totalRecebido-totalDes;
+
+  // Previous period comparison
+  const now=new Date();
+  let pIni='',pFim='';
+  if(ini&&fim){
+    const diff=Math.round((new Date(fim)-new Date(ini))/(864e5))+1;
+    const pf=new Date(new Date(ini)-864e5);
+    pFim=pf.toISOString().slice(0,10);
+    const pi=new Date(pf-(diff-1)*864e5);
+    pIni=pi.toISOString().slice(0,10);
+  }
+  const prev=pIni?DB.filter(r=>r.Data>=pIni&&r.Data<=pFim):[];
+  const pRec=sumBy(prev.filter(r=>r.Tipo==='Receita'));
+  const pDes=sumBy(prev.filter(r=>r.Tipo==='Despesa'));
+  const dRec=pRec?parseFloat(pct(totalRec,pRec)):0;
+  const dDes=pDes?parseFloat(pct(totalDes,pDes)):0;
+  const sr=calcSaldo();
+
+  // KPI cards
+  const kpis=document.getElementById('dashKpis');
+  if(kpis)kpis.innerHTML=`
+    <div class="kpi" style="border-top:3px solid var(--g600)">
+      <div class="kpi-label">↩ Receitas do período</div>
+      <div class="kpi-value text-green">${brl(totalVendas)}</div>
+      <div class="kpi-sub ${dRec>=0?'up':'dn'}">${dRec>=0?'▲':'▼'} ${Math.abs(dRec)}% vs anterior</div>
+      ${totalARec>0?`<div style="margin-top:8px;padding:6px 10px;background:var(--amber-bg);border-radius:var(--radius-xs);font-size:11px;color:var(--amber);font-weight:600">⏳ ${brl(totalARec)} ainda a receber</div>`:''}
+      <button class="btn btn-rec btn-sm" style="width:100%;margin-top:10px" onclick="openModal('lancamento',null,'Receita')">+ Adicionar receita</button>
+    </div>
+    <div class="kpi" style="border-top:3px solid var(--red)">
+      <div class="kpi-label" style="color:var(--red)">↪ Despesas do período</div>
+      <div class="kpi-value text-red">${brl(totalDes)}</div>
+      <div class="kpi-sub ${dDes<=0?'up':'dn'}">${dDes<=0?'▼':'▲'} ${Math.abs(dDes)}% vs anterior</div>
+      <button class="btn btn-des btn-sm" style="width:100%;margin-top:10px" onclick="openModal('lancamento',null,'Despesa')">+ Adicionar despesa</button>
+    </div>
+    <div class="kpi" style="border-top:3px solid var(--amber)">
+      <div class="kpi-label" style="color:var(--amber)">📊 Saldo atual</div>
+      <div class="kpi-value" style="color:${sr.total>=0?'var(--g800)':'var(--red)'}">${brl(sr.total)}</div>
+      <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:3px"><span>🏦 Banco</span><strong>${brl(sr.banco)}</strong></div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted)"><span>💵 Caixa</span><strong>${brl(sr.caixa)}</strong></div>
+      </div>
+    </div>`;
+
+  // Timeline
+  renderTimeline(filtered);
+  // Category bars
+  renderCatBars(filtered);
+  // Resumo
+  const resumoEl=document.getElementById('dashResumoCard');
+  if(resumoEl){
+    const margin=totalRecebido?(resultado/totalRecebido*100).toFixed(1):0;
+    const ticket=recRecebidas.length?(totalRecebido/recRecebidas.length):0;
+    resumoEl.innerHTML=`<div style="font-size:13px;font-weight:700;margin-bottom:10px">Resumo do período</div>`+
+      [['Total vendido',brl(totalVendas),'text-green'],
+       ['✓ Já recebido',brl(totalRecebido),'text-green'],
+       totalARec>0?['⏳ A receber',brl(totalARec),'text-amber']:null,
+       ['Despesas',brl(totalDes),'text-red'],
+       ['Resultado',brl(resultado),resultado>=0?'text-green':'text-red'],
+       ['Margem',margin+'%',''],['Ticket Médio',brl(ticket),'']
+      ].filter(Boolean).map(([l,v,c])=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px"><span style="color:var(--muted)">${l}</span><strong class="${c||''}">${v}</strong></div>`).join('')+
+      `<div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px"><span style="color:var(--muted)">Lançamentos</span><strong>${filtered.length}</strong></div>`;
+  }
+  // Saldo card
+  const saldoEl=document.getElementById('dashSaldoCard');
+  if(saldoEl)saldoEl.innerHTML=`<div style="font-size:11px;font-weight:700;color:var(--g800);text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px">💰 Disponível agora</div>`+
+    [['🏦 Banco / Stone',brl(sr.banco)],['💵 Caixa físico',brl(sr.caixa)],['📊 Projeção',brl(sr.projecao)]
+    ].map(([l,v],i)=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:${i<2?'6px 0':'8px 0 2px'};${i<2?'border-bottom:1px solid var(--g100);':''};font-size:${i===2?'15':'13'}px;font-weight:${i===2?800:400}"><span style="color:var(--g800)">${l}</span><strong style="color:var(--g800)">${v}</strong></div>`).join('');
+
+  // Charts
+  const co=colors();
+  const days=[...new Set(filtered.map(r=>r.Data))].sort();
+  mkChart('chDia',{type:'bar',data:{labels:days.map(fmtDate),datasets:[{label:'Receita',data:days.map(d=>sumBy(filtered.filter(r=>r.Data===d&&r.Tipo==='Receita'))),backgroundColor:'#0F5132bb'},{label:'Despesa',data:days.map(d=>sumBy(filtered.filter(r=>r.Data===d&&r.Tipo==='Despesa'))),backgroundColor:'#dc2626bb'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:co.t,font:{size:11}}}},scales:{x:{ticks:{color:co.m,font:{size:10},maxTicksLimit:15},grid:{color:co.b}},y:{ticks:{color:co.m,callback:v=>brl(v)},grid:{color:co.b}}}}});
+  const rcG=groupBy(rec,'Categoria');
+  mkChart('chRCat',{type:'doughnut',data:{labels:Object.keys(rcG),datasets:[{data:Object.values(rcG).map(a=>sumBy(a)),backgroundColor:PAL}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:co.t,font:{size:11},boxWidth:10}}}}});
+  const dcG=groupBy(des,'Categoria');
+  mkChart('chDCat',{type:'doughnut',data:{labels:Object.keys(dcG),datasets:[{data:Object.values(dcG).map(a=>sumBy(a)),backgroundColor:PAL_R}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:co.t,font:{size:11},boxWidth:10}}}}});
+  const mths=[...new Set(DB.map(r=>monthKey(r.Data)))].sort();
+  mkChart('chMen',{type:'bar',data:{labels:mths.map(monthLabel),datasets:[{label:'Receita',data:mths.map(m=>sumBy(DB.filter(r=>monthKey(r.Data)===m&&r.Tipo==='Receita'))),backgroundColor:'#0F5132'},{label:'Despesa',data:mths.map(m=>sumBy(DB.filter(r=>monthKey(r.Data)===m&&r.Tipo==='Despesa'))),backgroundColor:'#dc2626'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:co.t,font:{size:11}}}},scales:{x:{ticks:{color:co.m},grid:{color:co.b}},y:{ticks:{color:co.m,callback:v=>brl(v)},grid:{color:co.b}}}}});
+}
+
+let tlLimit=25;
+function renderTimeline(filtered){
+  if(!filtered)filtered=getFiltered('Data');
+  const el=document.getElementById('dashTimeline');if(!el)return;
+  const sorted=[...filtered].sort((a,b)=>b.Data.localeCompare(a.Data));
+  const slice=sorted.slice(0,tlLimit);
+  const byDate={};
+  slice.forEach(r=>{if(!byDate[r.Data])byDate[r.Data]=[];byDate[r.Data].push(r);});
+  const dates=Object.keys(byDate).sort((a,b)=>b.localeCompare(a));
+  el.innerHTML=`<div class="tl-header"><span style="font-size:13px;font-weight:700">Lançamentos</span><button class="btn btn-primary btn-sm" onclick="openModal('lancamento')">+ Adicionar</button></div>`+
+    dates.map(date=>`
+      <div class="tl-date">${fmtDate(date)}</div>
+      ${byDate[date].map(r=>{
+        const st=getStatus(r);
+        const isRec=r.Tipo==='Receita'||r.Tipo==='Entrada no Banco';
+        const iconBg=isRec?'var(--g100)':'var(--red-bg)';
+        const icon=isRec?'↩':'↪';
+        return`<div class="tl-row">
+          <div class="tl-icon" style="background:${iconBg}">${icon}</div>
+          <div class="tl-body">
+            <div class="tl-cat">${r.Categoria}</div>
+            <div class="tl-sub">${r.Pagamento}${r.Observações?' · '+r.Observações.slice(0,30):''}</div>
+          </div>
+          <div class="tl-right">
+            <div class="tl-val" style="color:${isRec?'var(--g800)':'var(--red)'}">${isRec?'':'-'}${brl(r.Valor)}</div>
+            <div>${statusBadge(st)}</div>
+          </div>
+          <div style="display:flex;gap:4px;margin-left:8px">
+            <button class="btn-icon" onclick="editLanc(${r.id})" style="font-size:12px;padding:6px">✏️</button>
+            <button class="btn-icon" onclick="delLanc(${r.id})" style="font-size:12px;padding:6px;color:var(--red)">🗑</button>
+          </div>
+        </div>`;
+      }).join('')}`).join('')+
+    (sorted.length>tlLimit?`<div style="text-align:center;padding:12px"><button class="btn btn-ghost btn-sm" onclick="tlLimit+=25;renderTimeline()">Ver mais ↓</button></div>`:'');
+}
+
+function renderCatBars(filtered){
+  if(!filtered)filtered=getFiltered('Data');
+  const el=document.getElementById('dashCatBars');if(!el)return;
+  const isRec=catTab==='rec';
+  const items=filtered.filter(r=>r.Tipo===(isRec?'Receita':'Despesa'));
+  const total=sumBy(items);
+  const grp=Object.entries(groupBy(items,'Categoria')).map(([k,v])=>({k,v:sumBy(v)})).sort((a,b)=>b.v-a.v);
+  if(!grp.length){el.innerHTML='<div style="font-size:12px;color:var(--muted);text-align:center;padding:20px">Sem dados</div>';return;}
+  const cor=isRec?'var(--g600)':'var(--red)';
+  el.innerHTML=grp.map(({k,v})=>{
+    const p=total?(v/total*100).toFixed(1):0;
+    return`<div class="cat-bar-wrap">
+      <div class="cat-bar-label"><span class="cat-bar-name">${k}</span><span class="cat-bar-pct">${p}%</span></div>
+      <div class="progress"><div class="progress-bar" style="width:${p}%;background:${cor}"></div></div>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px">${brl(v)}</div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════
+// LANÇAMENTOS PAGE
+// ═══════════════════════════════════════════════════
+let lancPage=1;
+const PG=20;
+
+function populateLancFilters(){
+  const fc=document.getElementById('fCat');
+  if(fc){const cats=[...new Set(DB.map(r=>r.Categoria))].sort();fc.innerHTML='<option value="">Categoria</option>'+cats.map(c=>`<option>${c}</option>`).join('');}
+}
+
+function getFilteredLanc(){
+  const di=document.getElementById('fDi')?.value;
+  const df=document.getElementById('fDf')?.value;
+  const tipo=document.getElementById('fTipo')?.value;
+  const cat=document.getElementById('fCat')?.value;
+  const busca=document.getElementById('fBusca')?.value.toLowerCase();
+  return DB.filter(r=>{
+    if(di&&r.Data<di)return false;
+    if(df&&r.Data>df)return false;
+    if(tipo&&r.Tipo!==tipo)return false;
+    if(cat&&r.Categoria!==cat)return false;
+    if(busca&&!JSON.stringify(r).toLowerCase().includes(busca))return false;
+    return true;
+  }).sort((a,b)=>b.Data.localeCompare(a.Data));
+}
+
+function renderLanc(){
+  const data=getFilteredLanc();
+  const pages=Math.ceil(data.length/PG)||1;
+  if(lancPage>pages)lancPage=1;
+  const slice=data.slice((lancPage-1)*PG,lancPage*PG);
+  const tb=document.getElementById('lancTable');
+  if(!tb)return;
+  tb.innerHTML=slice.map(r=>{
+    const st=getStatus(r);
+    const isRec=r.Tipo==='Receita'||r.Tipo==='Entrada no Banco';
+    return`<tr>
+      <td style="white-space:nowrap">${fmtDate(r.Data)}</td>
+      <td><span class="badge ${isRec?'badge-green':'badge-red'}" style="font-size:10px">${r.Tipo==='Entrada no Banco'?'Entrada':r.Tipo}</span></td>
+      <td>${r.Categoria}</td>
+      <td><span class="badge badge-blue" style="font-size:10px">${r.Pagamento}</span></td>
+      <td style="font-weight:700;color:${isRec?'var(--g800)':'var(--red)'};white-space:nowrap">${isRec?'':'-'}${brl(r.Valor)}</td>
+      <td style="white-space:nowrap;font-size:12px;color:var(--muted)">${fmtDate(r.DataRecebimento)||'—'}</td>
+      <td>${statusBadge(st)}</td>
+      <td style="font-size:12px;color:var(--muted);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.Observações||''}</td>
+      <td><div style="display:flex;gap:4px">
+        <button class="btn-icon" onclick="editLanc(${r.id})" style="font-size:12px;padding:5px">✏️</button>
+        <button class="btn-icon" onclick="dupLanc(${r.id})" style="font-size:12px;padding:5px">📋</button>
+        <button class="btn-icon" onclick="delLanc(${r.id})" style="font-size:12px;padding:5px;color:var(--red)">🗑</button>
+      </div></td>
+    </tr>`;
+  }).join('')||`<tr><td colspan="9"><div class="empty"><div class="empty-icon">📋</div>Nenhum lançamento</div></td></tr>`;
+  const pg=document.getElementById('lancPages');
+  if(pg){pg.innerHTML='';if(pages>1){for(let i=1;i<=pages;i++){const b=document.createElement('button');b.className='btn btn-sm '+(i===lancPage?'btn-primary':'btn-ghost');b.textContent=i;b.onclick=()=>{lancPage=i;renderLanc();};pg.appendChild(b);}}}
+}
+
+function clearFilters(){['fDi','fDf','fTipo','fCat','fBusca'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});renderLanc();}
+function editLanc(id){openModal('lancamento',DB.find(r=>r.id===id));}
+function dupLanc(id){const r=DB.find(x=>x.id===id);if(!r)return;const n={...r,id:++COUNTERS.db,Data:today(),DataRecebimento:today()};DB.unshift(n);saveAll();renderLanc();renderDash();}
+function delLanc(id){if(!confirm('Excluir lançamento?'))return;DB=DB.filter(r=>r.id!==id);saveAll();renderLanc();renderDash();}
+
+// ═══════════════════════════════════════════════════
+// A RECEBER
+// ═══════════════════════════════════════════════════
+function renderAReceber(){
+  const td=today();
+  const receitas=DB.filter(r=>r.Tipo==='Receita').sort((a,b)=>b.Data.localeCompare(a.Data));
+  const aRec=receitas.filter(r=>getStatus(r)==='A Receber');
+  const recebidas=receitas.filter(r=>getStatus(r)==='Recebido');
+  const atrasadas=aRec.filter(r=>r.DataRecebimento&&r.DataRecebimento<td);
+
+  const kp=document.getElementById('arKpis');
+  if(kp)kp.innerHTML=`
+    <div class="kpi"><div class="kpi-label">⏳ A Receber</div><div class="kpi-value text-amber">${brl(sumBy(aRec))}</div><div class="kpi-sub">${aRec.length} lançamento(s)</div></div>
+    <div class="kpi"><div class="kpi-label">✅ Recebido</div><div class="kpi-value text-green">${brl(sumBy(recebidas))}</div><div class="kpi-sub">${recebidas.length} lançamento(s)</div></div>
+    <div class="kpi"><div class="kpi-label">⚠️ Atrasado</div><div class="kpi-value" style="color:var(--red)">${atrasadas.length}</div><div class="kpi-sub">conta(s) em atraso</div></div>`;
+
+  const al=document.getElementById('arAlerts');
+  if(al)al.innerHTML=atrasadas.slice(0,3).map(a=>`<div class="alert alert-warn">⚠️ <strong>${a.Categoria}</strong> — previsto ${fmtDate(a.DataRecebimento)} · ${brl(a.Valor)}</div>`).join('');
+
+  const tb=document.getElementById('arTable');
+  if(!tb)return;
+  tb.innerHTML=receitas.map(r=>{
+    const st=getStatus(r);
+    const atras=st==='A Receber'&&r.DataRecebimento&&r.DataRecebimento<td;
+    return`<tr>
+      <td style="white-space:nowrap">${fmtDate(r.Data)}</td>
+      <td>${r.Categoria}${r.Observações?`<div style="font-size:11px;color:var(--muted)">${r.Observações.slice(0,30)}</div>`:''}</td>
+      <td><span class="badge badge-blue" style="font-size:10px">${r.Pagamento}</span></td>
+      <td style="font-weight:700;color:var(--g800);white-space:nowrap">${brl(r.Valor)}</td>
+      <td style="white-space:nowrap;font-size:12px;color:${atras?'var(--red)':'var(--muted)'}">${fmtDate(r.DataRecebimento)||'—'}</td>
+      <td>${statusBadge(st)}</td>
+      <td><div style="display:flex;gap:4px">
+        ${st==='A Receber'?`<button class="btn btn-primary btn-sm" onclick="marcarRecebido(${r.id})">✓</button>`:''}
+        <button class="btn-icon" onclick="editLanc(${r.id})" style="font-size:12px;padding:5px">✏️</button>
+      </div></td>
+    </tr>`;
+  }).join('')||`<tr><td colspan="7"><div class="empty"><div class="empty-icon">📥</div>Nenhuma receita</div></td></tr>`;
+}
+
+function marcarRecebido(id){
+  const r=DB.find(x=>x.id===id);if(!r)return;
+  const dt=prompt('Data de recebimento (AAAA-MM-DD):',today());
+  if(!dt)return;
+  r.DataRecebimento=dt;r.Status='Recebido';
+  saveAll();renderAReceber();renderDash();
+}
+
+// ═══════════════════════════════════════════════════
+// A PAGAR
+// ═══════════════════════════════════════════════════
+function renderAPagar(){
+  const td=today();
+  const despesas=DB.filter(r=>r.Tipo==='Despesa').sort((a,b)=>b.Data.localeCompare(a.Data));
+  const aPag=despesas.filter(r=>getStatus(r)==='A Pagar');
+  const pagas=despesas.filter(r=>getStatus(r)==='Pago');
+  const atrasadas=aPag.filter(r=>r.DataRecebimento&&r.DataRecebimento<td);
+
+  const kp=document.getElementById('apKpis');
+  if(kp)kp.innerHTML=`
+    <div class="kpi"><div class="kpi-label">⏳ A Pagar</div><div class="kpi-value text-red">${brl(sumBy(aPag))}</div><div class="kpi-sub">${aPag.length} conta(s)</div></div>
+    <div class="kpi"><div class="kpi-label">✅ Pago</div><div class="kpi-value text-green">${brl(sumBy(pagas))}</div><div class="kpi-sub">${pagas.length} lançamento(s)</div></div>
+    <div class="kpi"><div class="kpi-label">⚠️ Atrasado</div><div class="kpi-value" style="color:var(--red)">${atrasadas.length}</div><div class="kpi-sub">conta(s) em atraso</div></div>`;
+
+  const al=document.getElementById('apAlerts');
+  if(al)al.innerHTML=atrasadas.slice(0,3).map(a=>`<div class="alert alert-danger">⚠️ <strong>${a.Categoria}</strong> — previsto ${fmtDate(a.DataRecebimento)} · ${brl(a.Valor)}</div>`).join('');
+
+  const tb=document.getElementById('apTable');
+  if(!tb)return;
+  tb.innerHTML=despesas.map(r=>{
+    const st=getStatus(r);
+    const atras=st==='A Pagar'&&r.DataRecebimento&&r.DataRecebimento<td;
+    return`<tr>
+      <td style="white-space:nowrap">${fmtDate(r.Data)}</td>
+      <td>${r.Categoria}${r.Observações?`<div style="font-size:11px;color:var(--muted)">${r.Observações.slice(0,30)}</div>`:''}</td>
+      <td><span class="badge badge-blue" style="font-size:10px">${r.Pagamento}</span></td>
+      <td style="font-weight:700;color:var(--red);white-space:nowrap">${brl(r.Valor)}</td>
+      <td style="white-space:nowrap;font-size:12px;color:${atras?'var(--red)':'var(--muted)'}">${fmtDate(r.DataRecebimento)||'—'}</td>
+      <td>${statusBadge(st)}</td>
+      <td><div style="display:flex;gap:4px">
+        ${st==='A Pagar'?`<button class="btn btn-primary btn-sm" onclick="marcarPago(${r.id})">✓</button>`:''}
+        <button class="btn-icon" onclick="editLanc(${r.id})" style="font-size:12px;padding:5px">✏️</button>
+      </div></td>
+    </tr>`;
+  }).join('')||`<tr><td colspan="7"><div class="empty"><div class="empty-icon">📤</div>Nenhuma despesa</div></td></tr>`;
+}
+
+function marcarPago(id){
+  const r=DB.find(x=>x.id===id);if(!r)return;
+  const dt=prompt('Data de pagamento (AAAA-MM-DD):',today());
+  if(!dt)return;
+  r.DataRecebimento=dt;r.Status='Pago';
+  saveAll();renderAPagar();renderDash();
+}
+
+// ═══════════════════════════════════════════════════
+// COMPARATIVO
+// ═══════════════════════════════════════════════════
+function compQuick(elId){
+  const el=document.getElementById(elId);if(!el||el.children.length)return;
+  const n=new Date(),y=n.getFullYear(),m=n.getMonth();
+  const add=(lbl,i,f)=>{const b=document.createElement('button');b.className='btn btn-ghost btn-sm';b.style.fontSize='11px';b.textContent=lbl;b.onclick=()=>{document.getElementById(elId.replace('Q','1')).value=i;document.getElementById(elId.replace('Q','2')).value=f;renderComp();};el.appendChild(b);};
+  add('Este mês',`${y}-${String(m+1).padStart(2,'0')}-01`,new Date(y,m+1,0).toISOString().slice(0,10));
+  add('Mês anterior',`${y}-${String(m,10).padStart(2,'0').replace('0','')}-01`||`${y-1}-12-01`,new Date(y,m,0).toISOString().slice(0,10));
+  add('Últimos 10 dias',new Date(n-9*864e5).toISOString().slice(0,10),new Date().toISOString().slice(0,10));
+}
+
+function renderComp(){
+  compQuick('cAQ');compQuick('cBQ');
+  const a1=document.getElementById('cA1')?.value,a2=document.getElementById('cA2')?.value;
+  const b1=document.getElementById('cB1')?.value,b2=document.getElementById('cB2')?.value;
+  const cc=document.getElementById('compCards');if(!cc)return;
+  if(!a1||!a2||!b1||!b2){cc.innerHTML='<div class="alert alert-warn">Selecione os dois períodos para comparar.</div>';return;}
+  const pA=DB.filter(r=>r.Data>=a1&&r.Data<=a2);
+  const pB=DB.filter(r=>r.Data>=b1&&r.Data<=b2);
+  const rA=sumBy(pA.filter(r=>r.Tipo==='Receita')),dA=sumBy(pA.filter(r=>r.Tipo==='Despesa'));
+  const rB=sumBy(pB.filter(r=>r.Tipo==='Receita')),dB=sumBy(pB.filter(r=>r.Tipo==='Despesa'));
+  const lA=`${fmtDate(a1)} a ${fmtDate(a2)}`,lB=`${fmtDate(b1)} a ${fmtDate(b2)}`;
+  const cRow=(titulo,vA,vB,fmt,inv)=>{
+    const d=vB?((vA-vB)/Math.abs(vB)*100).toFixed(1):0;
+    const ok=inv?(vA<vB):(vA>=vB);
+    return`<div class="kpi">
+      <div class="kpi-label">${titulo}</div>
+      <div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;margin-top:6px">
+        <div><div style="font-size:10px;color:var(--g800);font-weight:600;margin-bottom:2px">A</div><div style="font-size:16px;font-weight:800;color:var(--g800)">${fmt(vA)}</div></div>
+        <div style="text-align:center"><span style="background:${ok?'var(--g100)':'var(--red-bg)'};color:${ok?'var(--g800)':'var(--red)'};padding:3px 8px;border-radius:100px;font-size:11px;font-weight:700">${d>=0?'+':''}${d}%</span></div>
+        <div style="text-align:right"><div style="font-size:10px;color:var(--red);font-weight:600;margin-bottom:2px">B</div><div style="font-size:16px;font-weight:800;color:var(--red)">${fmt(vB)}</div></div>
+      </div>
+    </div>`;
+  };
+  cc.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px">
+    ${cRow('📈 Receita',rA,rB,brl,false)}
+    ${cRow('📉 Despesa',dA,dB,brl,true)}
+    ${cRow('💰 Resultado',rA-dA,rB-dB,brl,false)}
+    ${cRow('📊 Margem',rA?(rA-dA)/rA*100:0,rB?(rB-dB)/rB*100:0,v=>v.toFixed(1)+'%',false)}
+    ${cRow('📋 Lançamentos',pA.length,pB.length,v=>v,false)}
+  </div>`;
+  const co=colors();
+  mkChart('chComp',{type:'bar',data:{labels:['Receita','Despesa','Resultado'],datasets:[{label:`A · ${lA}`,data:[rA,dA,rA-dA],backgroundColor:'#0F5132aa',borderRadius:4},{label:`B · ${lB}`,data:[rB,dB,rB-dB],backgroundColor:'#dc2626aa',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:co.t,font:{size:11}}}},scales:{x:{ticks:{color:co.m},grid:{color:co.b}},y:{ticks:{color:co.m,callback:v=>brl(v)},grid:{color:co.b}}}}});
+}
+
+// ═══════════════════════════════════════════════════
+// MENSALISTAS
+// ═══════════════════════════════════════════════════
+function renderMensalistas(){
+  const kp=document.getElementById('mensKpis');
+  const mrm=sumBy(MENSALISTAS,'valor');
+  const pend=MENSALISTAS.filter(m=>m.status!=='Pago').length;
+  if(kp)kp.innerHTML=`
+    <div class="kpi"><div class="kpi-label">Total</div><div class="kpi-value">${MENSALISTAS.length}</div></div>
+    <div class="kpi"><div class="kpi-label">Receita Recorrente</div><div class="kpi-value text-green">${brl(mrm)}</div></div>
+    <div class="kpi"><div class="kpi-label">Pendentes</div><div class="kpi-value ${pend?'text-red':''}">${pend}</div></div>`;
+  const gr=document.getElementById('mensGrid');
+  if(!gr)return;
+  gr.innerHTML=MENSALISTAS.length?MENSALISTAS.map(m=>`
+    <div class="card card-pad">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div><div style="font-size:14px;font-weight:700">${m.nome}</div><div style="font-size:11px;color:var(--muted);font-family:monospace">${m.placa||''} ${m.modelo||''}</div></div>
+        <span class="badge ${m.status==='Pago'?'badge-green':m.status==='Atrasado'?'badge-red':'badge-amber'}">${m.status}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">
+        <div><div style="font-size:16px;font-weight:800;color:var(--g800)">${brl(m.valor)}/mês</div><div style="font-size:11px;color:var(--muted)">Vence dia ${m.vencimento} · ${m.pagamento}</div></div>
+        <div style="display:flex;gap:4px">
+          <button class="btn-icon" onclick="editMens(${m.id})" style="font-size:12px;padding:6px">✏️</button>
+          <button class="btn-icon" onclick="toggleMensStatus(${m.id})" style="font-size:12px;padding:6px">✓</button>
+          <button class="btn-icon" onclick="delMens(${m.id})" style="font-size:12px;padding:6px;color:var(--red)">🗑</button>
+        </div>
+      </div>
+    </div>`).join(''):`<div class="empty" style="grid-column:1/-1"><div class="empty-icon">🚗</div><p>Nenhum mensalista</p><button class="btn btn-primary" onclick="openModal('mensalista')" style="margin-top:12px">+ Cadastrar</button></div>`;
+}
+function toggleMensStatus(id){const m=MENSALISTAS.find(x=>x.id===id);if(!m)return;const s=['Pendente','Pago','Atrasado'];m.status=s[(s.indexOf(m.status)+1)%3];saveAll();renderMensalistas();}
+function editMens(id){openModal('mensalista',MENSALISTAS.find(x=>x.id===id));}
+function delMens(id){if(!confirm('Excluir?'))return;MENSALISTAS=MENSALISTAS.filter(m=>m.id!==id);saveAll();renderMensalistas();}
+
+// ═══════════════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════════════
+function showCfg(t){
+  ['cats','pags','saldos','backup'].forEach(x=>{
+    document.getElementById('cfg'+x.charAt(0).toUpperCase()+x.slice(1))?.classList.toggle('hidden',x!==t);
+    document.getElementById('cfg-'+x)?.classList.toggle('active',x===t);
+  });
+  if(t==='cats')renderCatLists();
+  if(t==='pags')renderPagList();
+  if(t==='saldos')renderSaldos();
+}
+function renderCatLists(){
+  const chipStyle=(cat,tipo)=>`<div style="display:flex;align-items:center;gap:4px;background:${tipo==='rec'?'var(--g100)':'var(--red-bg)'};padding:4px 10px;border-radius:100px;border:1px solid ${tipo==='rec'?'var(--g400)':'var(--red-border)'};font-size:13px">${cat}<button onclick="delCat('${tipo}','${cat}')" style="background:none;border:none;cursor:pointer;color:var(--muted);line-height:1;font-size:15px;padding:0 0 0 2px">×</button></div>`;
+  document.getElementById('catRecList').innerHTML=CATS_REC.map(c=>chipStyle(c,'rec')).join('');
+  document.getElementById('catDesList').innerHTML=CATS_DES.map(c=>chipStyle(c,'des')).join('');
+}
+function addCat(t){const n=prompt(`Nova categoria de ${t==='rec'?'Receita':'Despesa'}:`);if(!n)return;if(t==='rec'){if(!CATS_REC.includes(n))CATS_REC.push(n);}else{if(!CATS_DES.includes(n))CATS_DES.push(n);}saveAll();renderCatLists();}
+function delCat(t,c){if(!confirm('Excluir?'))return;if(t==='rec')CATS_REC=CATS_REC.filter(x=>x!==c);else CATS_DES=CATS_DES.filter(x=>x!==c);saveAll();renderCatLists();}
+function renderPagList(){
+  document.getElementById('pagList').innerHTML=PAGS.map(p=>`<div style="display:flex;align-items:center;gap:4px;background:var(--bg);padding:4px 10px;border-radius:100px;border:1px solid var(--border);font-size:13px">${p}<button onclick="delPag('${p}')" style="background:none;border:none;cursor:pointer;color:var(--muted);line-height:1;font-size:15px;padding:0 0 0 2px">×</button></div>`).join('');
+}
+function addPag(){const n=prompt('Nova forma de pagamento:');if(!n)return;if(!PAGS.includes(n))PAGS.push(n);saveAll();renderPagList();}
+function delPag(p){if(!confirm('Excluir?'))return;PAGS=PAGS.filter(x=>x!==p);saveAll();renderPagList();}
+function renderSaldos(){
+  const e1=document.getElementById('sRef'),e2=document.getElementById('sCaixa'),e3=document.getElementById('sBanco');
+  if(e1)e1.value=SALDOS.ref;if(e2)e2.value=SALDOS.caixa;if(e3)e3.value=SALDOS.banco;
+  const sr=calcSaldo();
+  const sc=document.getElementById('saldoCalc');
+  if(sc)sc.innerHTML=`Calculado: 🏦 Banco ${brl(sr.banco)} · 💵 Caixa ${brl(sr.caixa)} · Total ${brl(sr.total)}`;
+}
+function saveSaldos(){
+  const d=document.getElementById('sRef')?.value,c=parseFloat(document.getElementById('sCaixa')?.value)||0,b=parseFloat(document.getElementById('sBanco')?.value)||0;
+  if(!d){alert('Informe a data');return;}
+  SALDOS={ref:d,caixa:c,banco:b};saveAll();renderSaldos();renderDash();alert('Saldos salvos!');
+}
+
+// ═══════════════════════════════════════════════════
+// MODALS
+// ═══════════════════════════════════════════════════
+function openModal(type,data=null,forceTipo=null){
+  document.getElementById('modalOverlay').classList.remove('hidden');
+  const box=document.getElementById('modalBox');
+  if(type==='lancamento'){
+    const initTipo=data?.Tipo||forceTipo||'Receita';
+    const initCats=initTipo==='Receita'?CATS_REC:initTipo==='Despesa'?CATS_DES:['Crédito Stone','Recebimento','Outros'];
+    const isOld=!!data;
+    // For new entries, if Receita+Crédito, default DataRecebimento to +30 days
+    let defRecDate=data?.DataRecebimento||data?.Data||today();
+    if(!isOld&&initTipo==='Receita'){defRecDate=today();}
+    box.innerHTML=`
+      <div class="modal-head"><h3>${isOld?'Editar':'Novo'} Lançamento</h3><button class="btn-icon" onclick="closeModal()">✕</button></div>
+      <div class="modal-body">
+        <div class="type-toggle">
+          <button class="type-btn ${initTipo==='Receita'?'active-rec':''}" id="tb-rec" onclick="changeTipo('Receita')">↩ Receita</button>
+          <button class="type-btn ${initTipo==='Despesa'?'active-des':''}" id="tb-des" onclick="changeTipo('Despesa')">↪ Despesa</button>
+          <button class="type-btn ${initTipo==='Outros'||initTipo==='Entrada no Banco'?'active-out':''}" id="tb-out" onclick="changeTipo('Outros')">🔄 Outros</button>
+        </div>
+        <input type="hidden" id="mTipo" value="${initTipo}">
+        <div class="form-grid">
+          <div class="form-row"><label class="form-label">Data do lançamento</label><input type="date" id="mData" value="${data?.Data||today()}" required></div>
+          <div class="form-row"><label class="form-label">Categoria</label>
+            <select id="mCat" required>${initCats.map(c=>`<option ${c===data?.Categoria?'selected':''}>${c}</option>`).join('')}</select></div>
+          <div class="form-row"><label class="form-label">Valor (R$)</label><input type="number" id="mValor" value="${data?.Valor||''}" step="0.01" min="0" required></div>
+          <div class="form-row"><label class="form-label">Pagamento</label>
+            <select id="mPag">${PAGS.map(p=>`<option ${p===data?.Pagamento?'selected':''}>${p}</option>`).join('')}</select></div>
+        </div>
+        <div class="form-grid">
+          <div class="form-row">
+            <label class="form-label">Data de Recebimento</label>
+            <input type="date" id="mDataRec" value="${data?.DataRecebimento||today()}">
+            <div style="font-size:11px;color:var(--muted);margin-top:4px">Deixe igual à data do lançamento para marcar como já recebido. Para crédito futuro, coloque a data que vai entrar na conta.</div>
+          </div>
+          <div class="form-row"><label class="form-label">Observações</label><textarea id="mObs" rows="3" style="resize:vertical">${data?.Observações||''}</textarea></div>
+        </div>
+      </div>
+      <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="saveLanc(${data?.id||0})">Salvar</button></div>`;
+  }else if(type==='mensalista'){
+    box.innerHTML=`
+      <div class="modal-head"><h3>${data?'Editar':'Novo'} Mensalista</h3><button class="btn-icon" onclick="closeModal()">✕</button></div>
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="form-row"><label class="form-label">Nome</label><input type="text" id="mNome" value="${data?.nome||''}"></div>
+          <div class="form-row"><label class="form-label">Telefone</label><input type="tel" id="mTel" value="${data?.telefone||''}"></div>
+          <div class="form-row"><label class="form-label">Placa</label><input type="text" id="mPlaca" value="${data?.placa||''}"></div>
+          <div class="form-row"><label class="form-label">Modelo</label><input type="text" id="mModelo" value="${data?.modelo||''}"></div>
+          <div class="form-row"><label class="form-label">Valor Mensal (R$)</label><input type="number" id="mVlr" value="${data?.valor||''}" step="0.01"></div>
+          <div class="form-row"><label class="form-label">Dia Vencimento</label><input type="number" id="mVenc" value="${data?.vencimento||5}" min="1" max="31"></div>
+          <div class="form-row"><label class="form-label">Pagamento</label>
+            <select id="mMPag">${PAGS.map(p=>`<option ${p===data?.pagamento?'selected':''}>${p}</option>`).join('')}</select></div>
+          <div class="form-row"><label class="form-label">Status</label>
+            <select id="mMSt"><option ${!data||data.status==='Pendente'?'selected':''}>Pendente</option><option ${data?.status==='Pago'?'selected':''}>Pago</option><option ${data?.status==='Atrasado'?'selected':''}>Atrasado</option></select></div>
+        </div>
+      </div>
+      <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="saveMens(${data?.id||0})">Salvar</button></div>`;
+  }
+}
+
+function changeTipo(tipo){
+  document.getElementById('mTipo').value=tipo;
+  ['rec','des','out'].forEach(x=>{
+    const b=document.getElementById('tb-'+x);
+    if(!b)return;
+    b.className='type-btn '+(tipo==='Receita'&&x==='rec'?'active-rec':tipo==='Despesa'&&x==='des'?'active-des':(tipo==='Outros'||tipo==='Entrada no Banco')&&x==='out'?'active-out':'');
+  });
+  const cats=tipo==='Receita'?CATS_REC:tipo==='Despesa'?CATS_DES:['Crédito Stone','Recebimento','Outros'];
+  const sel=document.getElementById('mCat');
+  if(sel)sel.innerHTML=cats.map(c=>`<option>${c}</option>`).join('');
+}
+
+function closeModal(){document.getElementById('modalOverlay').classList.add('hidden');}
+
+function saveLanc(id){
+  const tipo=document.getElementById('mTipo')?.value;
+  const data=document.getElementById('mData')?.value;
+  const dataRec=document.getElementById('mDataRec')?.value;
+  const cat=document.getElementById('mCat')?.value;
+  const pag=document.getElementById('mPag')?.value;
+  const valor=parseFloat(document.getElementById('mValor')?.value)||0;
+  const obs=document.getElementById('mObs')?.value||'';
+  if(!data||!valor){alert('Preencha data e valor');return;}
+  const tipoFinal=tipo==='Outros'?'Entrada no Banco':tipo;
+  const status=tipoFinal==='Receita'?(dataRec&&dataRec>today()?'A Receber':'Recebido'):(dataRec&&dataRec>today()?'A Pagar':'Pago');
+  const r={Tipo:tipoFinal,Data:data,DataRecebimento:dataRec||data,Categoria:cat,Pagamento:pag,Valor:valor,Observações:obs,Status:status};
+  if(id){const i=DB.findIndex(x=>x.id===id);if(i>=0)DB[i]={...DB[i],...r};}
+  else{r.id=++COUNTERS.db;DB.unshift(r);}
+  saveAll();closeModal();
+  renderDash();
+  if(document.getElementById('page-lancamentos').classList.contains('active'))renderLanc();
+  if(document.getElementById('page-areceber').classList.contains('active'))renderAReceber();
+  if(document.getElementById('page-apagar').classList.contains('active'))renderAPagar();
+}
+
+function saveMens(id){
+  const m={nome:document.getElementById('mNome').value,telefone:document.getElementById('mTel').value,placa:document.getElementById('mPlaca').value.toUpperCase(),modelo:document.getElementById('mModelo').value,valor:parseFloat(document.getElementById('mVlr').value)||0,vencimento:parseInt(document.getElementById('mVenc').value)||5,pagamento:document.getElementById('mMPag').value,status:document.getElementById('mMSt').value};
+  if(!m.nome){alert('Preencha o nome');return;}
+  if(id){const i=MENSALISTAS.findIndex(x=>x.id===id);if(i>=0)MENSALISTAS[i]={...MENSALISTAS[i],...m};}
+  else{m.id=++COUNTERS.mens;MENSALISTAS.push(m);}
+  saveAll();closeModal();renderMensalistas();
+}
+
+// ═══════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════
+const PAGE_RENDER={
+  dashboard:()=>renderDash(),
+  lancamentos:()=>{populateLancFilters();renderLanc();},
+  areceber:()=>renderAReceber(),
+  apagar:()=>renderAPagar(),
+  mensalistas:()=>renderMensalistas(),
+  comparativo:()=>renderComp(),
+  relatorios:()=>{},
+  config:()=>{showCfg('cats');}
+};
+
+function nav(page){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+page)?.classList.add('active');
+  document.querySelectorAll('.nav-item,.bnav-item').forEach(n=>n.classList.toggle('active',n.dataset.page===page));
+  tlLimit=25;
+  PAGE_RENDER[page]?.();
+  closeSidebar();
+}
+
+function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('sidebarOverlay').classList.toggle('show');}
+function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.getElementById('sidebarOverlay').classList.remove('show');}
+
+// ═══════════════════════════════════════════════════
+// DARK MODE
+// ═══════════════════════════════════════════════════
+function toggleDark(){const d=document.documentElement;d.toggleAttribute('data-dark');const on=d.hasAttribute('data-dark');document.getElementById('darkBtn').classList.toggle('on',on);sv('rep2_dark',on);}
+function initDark(){if(lv('rep2_dark',false)){document.documentElement.setAttribute('data-dark','');document.getElementById('darkBtn').classList.add('on');}}
+
+// ═══════════════════════════════════════════════════
+// EXPORT
+// ═══════════════════════════════════════════════════
+function exportExcel(){
+  const data=DB.map(r=>({Data:fmtDate(r.Data),Tipo:r.Tipo,Categoria:r.Categoria,Pagamento:r.Pagamento,Valor:r.Valor,'Data Recebimento':fmtDate(r.DataRecebimento),Status:getStatus(r),Observações:r.Observações}));
+  const ws=XLSX.utils.json_to_sheet(data);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Lançamentos');XLSX.writeFile(wb,'republica.xlsx');
+}
+function exportCSV(){
+  const rows=DB.map(r=>`${fmtDate(r.Data)},${r.Tipo},${r.Categoria},${r.Pagamento},${r.Valor},${fmtDate(r.DataRecebimento)},${getStatus(r)},"${r.Observações||''}"`);
+  const csv='Data,Tipo,Categoria,Pagamento,Valor,Dt.Recebimento,Status,Obs\n'+rows.join('\n');
+  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);a.download='republica.csv';a.click();
+}
+function togglePdfMenu(){const m=document.getElementById('pdfMenu');m.classList.toggle('hidden');}
+document.addEventListener('click',e=>{const m=document.getElementById('pdfMenu');if(m&&!m.contains(e.target)&&e.target.textContent!=='PDF ▾')m.classList.add('hidden');});
+
+function exportPDF(tipo){
+  document.getElementById('pdfMenu')?.classList.add('hidden');
+  const {ini,fim}=getPeriod();
+  const filtered=ini&&fim?DB.filter(r=>r.Data>=ini&&r.Data<=fim):DB;
+  const rec=filtered.filter(r=>r.Tipo==='Receita'),des=filtered.filter(r=>r.Tipo==='Despesa');
+  const totalRec=sumBy(rec),totalDes=sumBy(des),resultado=totalRec-totalDes;
+  const sr=calcSaldo();
+  const titles={mensal:'Relatório Financeiro Mensal',receitas:'Relatório de Receitas',despesas:'Relatório de Despesas',completo:'Relatório Completo'};
+  const periodoLabel=ini&&fim?`${fmtDate(ini)} a ${fmtDate(fim)}`:'Todo o período';
+  const dataToShow=tipo==='receitas'?rec:tipo==='despesas'?des:filtered;
+  const sorted=[...dataToShow].sort((a,b)=>a.Data.localeCompare(b.Data));
+  const catGrp=groupBy(dataToShow,'Categoria');
+  const catRows=Object.entries(catGrp).sort((a,b)=>sumBy(b[1])-sumBy(a[1])).map(([k,v])=>`<tr><td>${k}</td><td style="text-align:center">${v.length}</td><td style="text-align:right;font-weight:700;color:${tipo==='despesas'?'#dc2626':'#0F5132'}">${brl(sumBy(v))}</td></tr>`).join('');
+  const txRows=sorted.map(r=>`<tr><td>${fmtDate(r.Data)}</td><td>${r.Tipo}</td><td>${r.Categoria}</td><td>${r.Pagamento}</td><td style="text-align:right;font-weight:700;color:${r.Tipo==='Receita'?'#0F5132':'#dc2626'}">${brl(r.Valor)}</td><td>${fmtDate(r.DataRecebimento)||'—'}</td><td>${getStatus(r)}</td><td>${r.Observações||''}</td></tr>`).join('');
+  const showRec=tipo!=='despesas',showDes=tipo!=='receitas';
+  const html=`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>${titles[tipo]}</title>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:11px;color:#1e293b;padding:20px}
+.header{border-bottom:3px solid #0F5132;padding-bottom:12px;margin-bottom:16px}.header h1{font-size:18px;font-weight:800;color:#0F5132}.sub{font-size:11px;color:#64748b;margin-top:3px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}.kpi{border:1px solid #e2e8f0;border-radius:6px;padding:10px;background:#f8fafc}.kpi-l{font-size:9px;font-weight:700;text-transform:uppercase;color:#64748b;margin-bottom:3px}.kpi-v{font-size:14px;font-weight:800}
+.saldos{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;padding:10px;background:#f0faf4;border-radius:6px;border:1px solid #bbf7d0}.saldo{text-align:center}.saldo-l{font-size:9px;font-weight:700;text-transform:uppercase;color:#0F5132}.saldo-v{font-size:13px;font-weight:800;color:#0F5132}
+.st{font-size:12px;font-weight:700;color:#0F5132;border-bottom:1px solid #e2e8f0;padding-bottom:5px;margin:12px 0 8px}
+table{width:100%;border-collapse:collapse;font-size:10px}th{background:#0F5132;color:#fff;padding:6px 8px;text-align:left;font-size:9px;text-transform:uppercase}td{padding:5px 8px;border-bottom:1px solid #f1f5f9}tr:nth-child(even) td{background:#f8fafc}
+.footer{margin-top:16px;padding-top:8px;border-top:1px solid #e2e8f0;font-size:9px;color:#94a3b8;display:flex;justify-content:space-between}
+.pos{color:#0F5132}.neg{color:#dc2626}
+@media print{@page{margin:12mm;size:A4}}
+</style></head><body>
+<div class="header"><h1>🅿 Estacionamento República</h1><div class="sub">${titles[tipo]}</div><div class="sub">Período: <strong>${periodoLabel}</strong> · Gerado em: ${fmtDate(today())}</div></div>
+<div class="kpis">
+  ${showRec?`<div class="kpi"><div class="kpi-l">Receita Total</div><div class="kpi-v pos">${brl(totalRec)}</div></div>`:''}
+  ${showDes?`<div class="kpi"><div class="kpi-l">Despesa Total</div><div class="kpi-v neg">${brl(totalDes)}</div></div>`:''}
+  ${showRec&&showDes?`<div class="kpi"><div class="kpi-l">Resultado</div><div class="kpi-v ${resultado>=0?'pos':'neg'}">${brl(resultado)}</div></div>`:''}
+  <div class="kpi"><div class="kpi-l">Lançamentos</div><div class="kpi-v">${dataToShow.length}</div></div>
+  ${showRec&&showDes?`<div class="kpi"><div class="kpi-l">Margem</div><div class="kpi-v">${totalRec?((resultado/totalRec)*100).toFixed(1):0}%</div></div>`:''}
+</div>
+${tipo==='completo'||tipo==='mensal'?`<div class="saldos"><div class="saldo"><div class="saldo-l">💵 Caixa</div><div class="saldo-v">${brl(sr.caixa)}</div></div><div class="saldo"><div class="saldo-l">🏦 Banco</div><div class="saldo-v">${brl(sr.banco)}</div></div><div class="saldo"><div class="saldo-l">💰 Total</div><div class="saldo-v">${brl(sr.total)}</div></div></div>`:''}
+<div class="st">Resumo por Categoria</div>
+<table><thead><tr><th>Categoria</th><th style="text-align:center">Qtd.</th><th style="text-align:right">Total</th></tr></thead><tbody>${catRows}</tbody></table>
+<div class="st">Lançamentos (${sorted.length})</div>
+<table><thead><tr><th>Data</th><th>Tipo</th><th>Categoria</th><th>Pagamento</th><th style="text-align:right">Valor</th><th>Dt.Receb.</th><th>Status</th><th>Obs.</th></tr></thead><tbody>${txRows}</tbody></table>
+<div class="footer"><span>Estacionamento República — Sistema Financeiro</span><span>${new Date().toLocaleString('pt-BR')}</span></div>
+<script>window.onload=()=>window.print()<\/script></body></html>`;
+  const w=window.open('','_blank');if(w){w.document.write(html);w.document.close();}else alert('Permita pop-ups.');
+}
+
+function doBackup(){
+  const data={DB,CATS_REC,CATS_DES,PAGS,MENSALISTAS,SALDOS,COUNTERS,v:2};
+  const a=document.createElement('a');a.href='data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(data));a.download=`backup-republica-${today()}.json`;a.click();
+}
+function importBackup(e){
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();r.onload=ev=>{try{const d=JSON.parse(ev.target.result);
+    if(d.DB)DB=d.DB;if(d.CATS_REC)CATS_REC=d.CATS_REC;if(d.CATS_DES)CATS_DES=d.CATS_DES;
+    if(d.PAGS)PAGS=d.PAGS;if(d.MENSALISTAS)MENSALISTAS=d.MENSALISTAS;
+    if(d.SALDOS)SALDOS=d.SALDOS;if(d.COUNTERS)COUNTERS=d.COUNTERS;
+    saveAll();nav('dashboard');alert('Backup importado!');
+  }catch(err){alert('Arquivo inválido');}};r.readAsText(f);
+}
+function importExcel(e){
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();r.onload=ev=>{
+    const wb=XLSX.read(ev.target.result,{type:'binary'});
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    const data=XLSX.utils.sheet_to_json(ws);
+    const mapped=data.map(row=>{
+      let dt=row.Data||row.data||'';
+      if(typeof dt==='number'){const d=new Date((dt-25569)*86400000);dt=d.toISOString().slice(0,10);}
+      else if(typeof dt==='string'&&dt.includes('/')){const p=dt.split('/');dt=p.length===3?`${p[2].length===4?p[2]:'20'+p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`:dt;}
+      const tipo=row.Tipo||row.tipo||'Receita';
+      const valor=parseFloat(row.Valor||row.valor||0);
+      const dataRec=row['Data Recebimento']||row.DataRecebimento||dt;
+      return{id:++COUNTERS.db,Data:dt,Tipo:tipo,Categoria:row.Categoria||'Outros',Pagamento:row.Pagamento||'Dinheiro',Valor:valor,DataRecebimento:dataRec,Status:tipo==='Receita'?'Recebido':'Pago',Observações:row.Observações||''};
+    }).filter(r=>r.Valor>0);
+    DB=[...mapped,...DB];saveAll();nav('lancamentos');alert(`${mapped.length} lançamentos importados!`);
+  };r.readAsBinaryString(f);
+}
+
+// ═══════════════════════════════════════════════════
+// RESPONSIVE LAYOUT
+// ═══════════════════════════════════════════════════
+function adjustLayout(){
+  const wide=window.innerWidth>=640;
+  const grid=document.getElementById('dashGrid');
+  if(grid)grid.style.gridTemplateColumns=wide?'1fr 320px':'1fr';
+  const charts=document.getElementById('dashCharts');
+  if(charts)charts.style.gridTemplateColumns=wide?'1fr':'1fr';
+}
+window.addEventListener('resize',adjustLayout);
+
+// ═══════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════
+initDark();
+adjustLayout();
+// Force update status for all old records
+if(DB.length&&!DB[0].hasOwnProperty('DataRecebimento')){
+  DB=DB.map(r=>({...r,DataRecebimento:r.Data,Status:r.Tipo==='Receita'?'Recebido':'Pago'}));
+  saveAll();
+}
+renderDash();
+</script>
+</body>
+</html>
